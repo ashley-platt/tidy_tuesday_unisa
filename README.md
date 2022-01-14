@@ -9,8 +9,6 @@ Here you can find information in the following folders-
    - use naming convention: YYYY-MM-DD_(topic name)_(INITIALS)
        - e.g., 2021-11-07_cricket_AP *note that the date is for the session!
 
-- recordings: recordings of tidy tuesday sessions 
-
 
 Useful links 
 
