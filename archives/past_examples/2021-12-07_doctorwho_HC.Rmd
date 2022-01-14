@@ -1,0 +1,297 @@
+---
+title: "Cricket_Who_HC"
+author: "Hayley Caldwell"
+date: "02/12/2021"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(install = FALSE, update = FALSE, tidytuesdayR, tidyverse, lubridate, plotly, ggimage, ggpubr, ggalt, ggforce, DT)
+
+tt_data_dw <- tt_load("2021-11-23")
+
+writers <- tt_data_dw$writers
+directors <- tt_data_dw$directors
+episodes <- tt_data_dw$episodes
+imdb <- tt_data_dw$imdb
+
+```
+
+### Introduction
+
+Doctor Who is a British science fiction television programme broadcast by BBC. The programme depicts the adventures of a Time Lord called the Doctor, an extraterrestrial being who appears to be human. The Doctor explores the universe in a time-travelling space ship called the TARDIS.
+
+### Datatable
+
+Here is the main dataset I will be working with today. 
+
+```{r datatable, echo=FALSE}
+datatable(episodes)
+```
+
+### Adding the Doctors
+
+Unfortunately, there is no variable for the actor who played the Doctor in each episode. This actor changes periodically and it would be interesting to see how facets of the show change with this. Therefore, I added this as another column. 
+
+```{r doctorfy, echo=TRUE}
+
+episodes <- episodes %>% 
+  mutate(doctor = case_when(
+    season_number == "1" ~ "Christopher Eccleston", 
+    season_number == "2" ~ "David Tennant",
+    season_number == "3" ~ "David Tennant",
+    season_number == "4" ~ "David Tennant",
+    first_aired == "2008-12-25" ~ "David Tennant",
+    first_aired == "2009-4-11" ~ "David Tennant",
+    first_aired == "2009-11-15" ~ "David Tennant",
+    first_aired == "2009-12-25" ~ "David Tennant",
+    first_aired == "2010-01-01" ~ "David Tennant",
+    season_number == "5" ~ "Matt Smith",
+    season_number == "6" ~ "Matt Smith",
+    season_number == "7" ~ "Matt Smith",
+    first_aired == "2013-12-25" ~ "Matt Smith",
+    season_number == "8" ~ "Peter Capaldi",
+    season_number == "9" ~ "Peter Capaldi",
+    season_number == "10" ~ "Peter Capaldi",
+    season_number == "11" ~ "Jodie Whittaker", 
+    season_number == "12" ~ "Jodie Whittaker", 
+    season_number == "13" ~ "Jodie Whittaker", 
+    episode_title == "The Day of the Doctor" ~ "Matt, David, and John" # Crossover episode 
+  ))
+
+```
+
+### Describing the data
+
+Doctor Who has run for many years in its classic seasons (1963 - 1989) and it's revived (2005 - present). So I wanted to see what seasons were included. 
+
+```{r no. of years, echo=TRUE}
+
+episodes <- episodes %>% 
+  mutate(year = year(first_aired), 
+         month = month(first_aired), 
+         day = day(first_aired))
+
+range(episodes$year) # 2005 - 2021 
+
+unique(episodes$era) # (doesn't include classic 1963 - 1989 era)
+
+```
+
+The data here only includes episodes from 2005 onward. Despite there being a variable that codes for era (classic or revived), no data from the classic run was included in these data. 
+
+Instead, the data includes the the most recent 13 seasons, including 172 episodes, 19 of which were specials. 
+
+```{r no. of seasons and episodes, echo=TRUE}
+
+season_no. <- episodes %>%
+  select(season_number) %>% 
+  na.omit()
+
+range(season_no.$season_number) # 13 seasons, 172 episodes
+
+episodes %>% 
+  count(type)
+
+```
+
+The shortest episode and length (minutes) was 41 minutes long, as most episodes run for 45 minutes, +/-5.
+
+```{r shortest episodes}
+
+episodes %>% 
+  slice_min(duration) %>% 
+  pull(episode_title, duration)
+
+ep_short <- episodes %>% 
+  select(episode_title, type, duration) %>% 
+  arrange(duration)
+head(ep_short) # 45 +/- 5
+
+```
+However, the longest episodes were much longer than this 45+/-5. The longest episode was The Day of the Doctor, which included 3 separate Doctors and ran for 77 minutes. Most other episodes that ran for similar times were specials. 
+
+```{r the longest episodes}
+
+episodes %>% 
+  slice_max(duration) %>% 
+  pull(episode_title, duration) # crossover episode 
+
+ep_long <- episodes %>% 
+  select(episode_title, type, duration) %>% 
+  arrange(-duration)
+head(ep_long) # deep breath - PC's 1st episode 
+
+```
+### Ratings over time
+
+Next I wanted to look at the episodes' ratings over time. 
+
+```{r plotly ratings over time}
+
+view_rating <- episodes %>% 
+  select(first_aired, rating, uk_viewers, episode_title, doctor) %>% 
+  na.omit()
+
+g1 <- ggplot(view_rating, aes(x = first_aired, y = rating, label =  episode_title)) +
+  geom_line(colour = '#003b6f') +
+  labs(y = 'Episode Rating', 
+       x = "Air Date", 
+       title = "Doctor Who Episode Ratings Over Time")
+#g1
+
+ggplotly(g1)
+
+```
+
+You can see that following "The Day of the Doctor", ratings for Doctor Who have never reached as high. After its follow-up episode, the Doctor became Peter Capaldi and fans were divided. 
+
+### Views over time
+
+Next I wanted to see if these poorer ratings were reflected in the show's views. 
+
+```{r plotly views over time}
+
+g2 <- ggplot(view_rating, aes(x = first_aired, y = uk_viewers, label = episode_title)) +
+  geom_line(colour = '#003b6f') +
+  labs(y = 'UK Viewers', 
+       x = "Air Date", 
+       title = "Doctor Who Episode Views Over Time")
+#g2
+
+ggplotly(g2)
+
+```
+
+Viewership for Doctor Who over time seems to be cyclical, likely fluctuating with season-linked patterns. Views after the turning point episodes for ratings dropped and only reached its revious viewership for the episode debuting Jodie Whittaker, the first Doctor to be played by a woman. However, views fell after this. 
+
+This plot shows the rating and view trends side-by-side. 
+
+```{r stitch together}
+
+g4 <- ggarrange(g1, g2)
+g4
+
+# ggplotly(g4) # cannot do with plotly
+
+```
+### Impacts of doctor actors on ratings
+
+It is clear that the Doctor of the time has an influence on who watches. So let's look at the distributions of ratings by doctor. 
+
+```{r ratings by doctor}
+
+doctors_rating <- episodes %>%
+  select(rating, doctor, episode_title) %>%
+  filter(!episode_title == "The Day of the Doctor")
+
+doctor_order <- c("Jodie Whittaker", "Peter Capaldi", "Matt Smith", "David Tennant", "Christopher Eccleston")
+
+g5 <- ggplot(doctors_rating, aes(x = factor(doctor, level = doctor_order), y = rating, colour = doctor, label = episode_title)) +
+  geom_jitter() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  labs(x = "Doctor Actor", 
+       y = "Episode Rating", 
+       title = "Episode Ratings By Doctor")
+#g5
+
+ggplotly(g5)
+
+```
+
+C.E. Had a variety of ratings, D.T. (except for 1 episode) and M.S. were consistently rated highly, then ratings dropped for P.C. and J.W. The ratings seem to cluster nicely with the doctor.
+
+### Impacts of writers on ratings
+
+I then wanted to see if the writer behind the episodes also influenced the ratings. 
+```{r ratings by writer}
+
+writers_episodes <- left_join(episodes, writers)
+
+writer_length <- writers_episodes %>% 
+  group_by(writer) %>% 
+  mutate(eps_written = n()) %>% 
+  ungroup() %>% 
+  filter(eps_written > 3)
+
+g6 <- ggplot(writer_length, aes(x = reorder(writer, eps_written), y = rating, colour = writer, label = episode_title, label2 = season_number)) +
+  geom_jitter() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  labs(x = "Writer", 
+       y = "Epsode Rating", 
+       title = "Episode Ratings by Writer")
+#g6
+
+ggplotly(g6)
+
+```
+
+Here it seems that the more episodes you write, the more varied your ratings are, excluding Steven Moffat who had fairly consistent ratings. 
+
+### The rewards of good writing
+
+I then wanted to see if the people responsible for good or bad ratings were subsequently involved in more or less episodes. Although the length of when a doctor stays is consistent regardless of ratings, I wanted to see if there was a relationship between the average rating of the writers' episodes, and how many episodes they were invited to write. 
+
+```{r writers episodes written by average rating}
+
+writer_length_1 <- writers_episodes %>% 
+  select(writer, rating) %>% 
+  group_by(writer) %>% 
+  mutate(eps_written = n()) %>% 
+  na.omit() %>% 
+  mutate(mean_rating = mean(rating)) %>% 
+  select(writer, eps_written, mean_rating) %>% 
+  ungroup() %>% 
+  distinct() %>% 
+  #filter(eps_written > 3) %>% 
+  arrange(mean_rating)
+
+g7 <- ggplot(writer_length_1, aes(x = eps_written, y = mean_rating, colour = writer)) +
+  geom_point() +
+  theme(legend.position = 'none') +
+  labs(y = 'Average Episode Rating', 
+       x = "No. of Episodes Written", 
+       title = "Relationship Between Episodes Written and Average Rating")
+#g7
+
+ggplotly(g7)
+
+```
+
+I then decided to visualise this in a different and more fun way. 
+
+```{r attemptted circle}
+
+writer_length_2 <- writer_length_1 %>% 
+  filter(eps_written > 3)
+
+g8 <- ggplot(data = writer_length_2) +
+  geom_link(aes(x = mean_rating, xend = mean_rating, y = 0, yend = eps_written, colour = writer), size = 1.65, alpha = 0.6) +
+  #geom_point(aes(y=eps_written, x=mean_rating, color=writer), size=2) +
+  geom_image(mapping = aes(x = mean_rating, y = eps_written, image = '~\\2021-12-07_tardis.png'), size = 0.05) +
+  coord_polar(theta = "y", clip="off", start = 0) +
+  scale_x_continuous(limits = c(79, 90)) +
+  scale_y_continuous(limits = c(NA, 60)) +
+  theme_void() 
+  #annotate(geom="text", label = "", x=75, y=50, vjust=1.5, color= "purple", size=0)
+g8
+
+```
+
+### Bloopers
+
+Here is an outtake of an ugly, tardis-filled graph. 
+
+```{r tardis blooper}
+g3 <- ggplot(view_rating, aes(x = first_aired, y = rating, label = episode_title)) +
+  geom_line(colour = '#003b6f') +
+  geom_image(mapping = aes(x = first_aired, y = rating, image = '~\\2021-12-07_tardis.png'))
+
+g3
+```
