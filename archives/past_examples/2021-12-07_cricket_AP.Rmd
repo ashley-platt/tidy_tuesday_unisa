@@ -1,0 +1,333 @@
+---
+title: "Cricket Who - Main"
+author: "Ashley Platt"
+date: "01/12/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(tidyverse)
+library(tidytuesdayR)
+library(lubridate)
+
+```
+
+
+```{r data}
+
+cricket_list <- tidytuesdayR::tt_load('2021-11-30')
+cricket <- cricket_list$matches
+
+  
+who_list <- tidytuesdayR::tt_load('2021-11-23')
+who_ep <- who_list$episodes
+who_IMDB <- who_list$imdb
+
+```
+
+## Cricket exploration 
+
+A One Day International (ODI) is a form of limited overs cricket, played between two teams with international status, in which each team faces a fixed number of overs, currently 50, with the game lasting up to 9 hours. The Cricket World Cup, generally held every four years, is played in this format. One Day International matches are also called Limited Overs Internationals (LOI), although this generic term may also refer to Twenty20 International matches. They are major matches and considered the highest standard of List A, limited-overs competition.
+
+The Cricket World Cup (officially known as ICC Men's Cricket World Cup)[2] is the international championship of One Day International (ODI) cricket. The event is organised by the sport's governing body, the International Cricket Council (ICC), every four years, with preliminary qualification rounds leading up to a finals tournament. The tournament is one of the world's most viewed sporting events and is considered the "flagship event of the international cricket calendar" by the ICC
+
+
+What are we working with?
+```{r}
+
+summary(cricket)
+view(cricket)
+
+```
+
+
+The information about the data set says that the ICC World Cup is held every 4 years. Does this mean that our data set only includes dates every 4 years?
+
+```{r}
+
+unique(cricket$match_date)
+
+```
+
+By looking at the unique data values --> this does not seem true as dates occur every year. Looking at the match IDs this seems to indicate that this data set includes all one day international matches from Jan 1st 1996 - Jan 26 2005.
+
+## Some descriptives: 
+
+Are teams more likely to win at home?
+
+```{r}
+
+cricket$winathome <- ifelse(cricket$winner == cricket$ground_country, 1, 0)
+
+table(cricket$winathome) #table counts how many of each value
+
+#indicates it's not more common for teams to win at home (785 vs. 452)
+```
+
+This variable may be less important for T20 cricket. Often in test cricket teams are critiqued if they can't win when they play away. However in ODIs it is part of the competition to play many games away from home. 
+
+
+We can use the ball_remaining column to indicate the "quickest" games 
+
+```{r}
+cricket %>% 
+  select(match_id, ball_remaining, team1, team2) %>% 
+  arrange(ball_remaining) #if ball remaining is a character how does arrange work? 
+
+```
+
+NOTE: The Duckworth–Lewis–Stern method (DLS OR D/L method) is a mathematical formulation designed to calculate the target score for the team batting second in a limited overs cricket match interrupted by weather or other circumstances.
+
+We need to pull out the numbers from this column: 
+
+```{r}
+
+library(tidyr)
+
+cricket %>% 
+  select(match_id, ball_remaining, team1, team2) %>% 
+  mutate(ball_no = extract_numeric(ball_remaining)) %>% #here I have used the extract_numeric function within mutate
+  arrange(-ball_no)
+
+```
+
+//////////////////////////////////////////////
+
+## How can we summarise all this information - maybe a graph isn't the most suitable 
+
+This data set provides us with a lot of information across many years and many games. When tasked with displaying this information - for a specific series/cup/tour/etc - a table may be more suitable for displaying this information
+
+Source: https://github.com/tashapiro/TidyTuesday/blob/master/2021/W49/cricket_world_cup.R
+
+```{r}
+
+#extra libraries 
+
+library(dplyr)
+library(gt)
+library(gtExtras)
+#library(ggflags)
+library(paletteer)
+library(systemfonts)
+
+#remotes::install_github("jthomasmock/gtExtras")
+#devtools::install_github("rensa/ggflags"
+```
+
+
+```{r}
+
+df <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-11-30/matches.csv')
+
+df$match_date<-as.Date(df$match_date,'%b %d, %Y')
+
+#get info for team 1
+t1<-df%>%select(team1, score_team1, wickets_team1, team2, winner, margin, series, match_date, match_id)%>%
+rename(team = team1, score=score_team1, wickets=wickets_team1, opponent=team2)
+
+#get info for team 2
+t2<-df%>%select(team2, score_team2, wickets_team2, team1, winner, margin, series, match_date, match_id)%>%
+  rename(team = team2, score=score_team2, wickets=wickets_team2, opponent=team1)
+
+#combine team 1 and team 2 data, create vertical format for data
+df_new<-rbind(t1,t2)
+#create win indicator, if team name is the same as the winner name, then 1 (won), or 0 (lost)
+df_new$win<-ifelse(df_new$team==df$winner,1,0)
+
+```
+
+
+
+```{r}
+
+
+#get data just for ICC World Cup 1999
+df_1996<-df_new%>%filter(match_date>=as.Date("1999-05-14") & match_date<=as.Date("1999-06-20"))%>%
+  group_by(team)%>%
+  summarise(score=sum(score),
+            wickets=sum(wickets),
+            games=n(),
+            avg_score=round(sum(score)/n(),0),
+            wins=sum(win),
+            losses=n()-sum(win),
+            win_perc=round(sum(win)/n(),2))%>%
+  #arrange data set based on wins
+  arrange(desc(wins, win_perc))%>%
+  #add flag images - images taken from https://www.flaticon.com/packs/countrys-flags
+  mutate(
+    flag = case_when(
+      team == "Sri Lanka" ~ 'https://cdn-icons-png.flaticon.com/512/197/197398.png',
+      team == "South Africa" ~ 'https://cdn-icons-png.flaticon.com/512/197/197562.png',
+      team == "Pakistan" ~ 'https://cdn-icons-png.flaticon.com/512/197/197606.png',
+      team == "India" ~ 'https://cdn-icons-png.flaticon.com/512/197/197419.png',
+      team == "Australia" ~ 'https://cdn-icons-png.flaticon.com/512/197/197507.png',
+      team == "Netherlands" ~'https://cdn-icons-png.flaticon.com/512/197/197441.png',
+      team == "United Arab Emirates" ~'https://cdn-icons-png.flaticon.com/512/197/197569.png',
+      team == "Kenya" ~'https://cdn-icons-png.flaticon.com/512/197/197608.png',
+      team == "Zimbabwe" ~'https://cdn-icons-png.flaticon.com/512/197/197394.png',
+      team == "England" ~'https://cdn-icons-png.flaticon.com/512/197/197485.png',
+      team == "New Zealand" ~'https://cdn-icons-png.flaticon.com/512/197/197589.png',
+      team == "West Indies" ~'https://s.ndtvimg.com/images/entities/300/west-indies-2119.png'
+    ))%>%
+  select(flag, everything())
+
+#create list of scores
+scores<-df_new%>%filter(match_date>=as.Date("1999-05-14") & match_date<=as.Date("1999-06-20"))%>%
+  arrange(match_date)%>%group_by(team)%>%summarise(
+  scores_data = list(score), .groups = "drop")
+#create list of wins and losses
+wins_losses<-df_new %>% 
+filter(match_date>=as.Date("1999-05-14") & match_date<=as.Date("1999-06-20"))%>%
+  arrange(match_date)%>%
+  group_by(team) %>% 
+  summarise(outcomes = list(win), .groups = "drop")%>%
+  select(team,outcomes)
+
+#merge data sets
+df_1996<-left_join(df_1996,scores,by=c("team"="team"))
+df_1996<-left_join(df_1996,wins_losses,by=c("team"="team"))
+
+#create table
+table<-df_1996%>%
+  select(flag, team, score, wickets, games, wins, losses, avg_score, scores_data, outcomes, win_perc)%>%
+  gt()%>%
+  gt_img_rows(flag)%>%
+  fmt_percent(columns = win_perc, decimals = 0)%>%
+  gt_color_rows(win_perc, palette = "ggsci::blue_material")%>%
+  gt_sparkline(scores_data,  line_color = "#505050")%>%
+  gt_plt_winloss(outcomes, max_wins = 16)%>%
+  gt_theme_espn()%>%
+  cols_align(
+    align = "center",
+    columns = c(scores_data, flag, outcomes)
+  )%>%
+  tab_footnote("Outcomes represents wins (blue) and losses (red) for all games played",
+               locations = cells_column_labels(columns = outcomes))%>%
+  cols_label(
+    flag = "",
+    win_perc = "WIN %",
+    score = "TOTAL PTS",
+    scores_data = "PTS PER GAME",
+    avg_score = "AVG PTS"
+  )%>%
+  tab_options(heading.title.font.size = 20)%>%
+  tab_header(title = "ICC World Cup 1999",
+             subtitle= "Outcomes summary by team from ICC World Cup")%>%
+  tab_source_note("Data from ESPN | Table Graphic by @tanya_shapiro")
+
+table
+
+```
+
+//////////////////////////////////////////////////////
+
+# Cricket_Who: Combining data sets that don't go together 
+
+
+```{r pick columns } 
+
+cricket_clean <- cricket %>% 
+  select(team1, team2, winner, match_date) %>% 
+  pivot_longer(cols = starts_with("team"), 
+               names_to = "team",
+               values_to = "country") %>% 
+  filter(country == "England")
+
+who_ep_clean <- who_ep %>% 
+  select(first_aired, episode_number)
+
+
+```
+
+Only interested in the month
+
+```{r}
+
+cricket_month <- cricket_clean %>% 
+  mutate(month = (substr(cricket_clean$match_date, 1, 3))) %>% 
+  mutate(month = recode_factor(month, "Jan" = "01", "Feb" = "02", "Mar" = "03", "Apr" = "04", "May" = "05", "Jun" = "06", "Jul" = "07", "Aug" = "08", "Sep" = "09", "Oct" = "10", "Nov" = "11", "Dec" = "12")) %>% 
+  count(month)
+
+```
+
+
+```{r}
+
+doctor_month <- who_ep_clean %>% 
+  separate(first_aired, into = c("year", "month", "day"), sep = "-") %>% 
+  count(month)
+
+```
+
+let's plot 
+
+```{r}
+
+cricket_who <- cricket_month %>% 
+  ggplot(aes(x = month, y= n)) +
+  geom_col(fill = "green", alpha = 0.5) + #cricket 
+  geom_col(data = doctor_month, fill = "blue", alpha = 0.5) #doctor who 
+
+cricket_who 
+
+```
+
+
+we can do better 
+
+```{r}
+
+cricket_month_2 <- cricket_month %>% 
+  rename(n_cricket = n)
+  
+
+doctor_month_2 <- doctor_month %>% 
+  rename(n_doctor = n)
+
+cricket_doctor <- cricket_month_2 %>% 
+  left_join(doctor_month_2) %>% 
+  pivot_longer(cols = starts_with("n"),
+               names_to = "category",
+               values_to = "count") %>% 
+  mutate(category = recode_factor(category, "n_cricket" = "cricket", "n_doctor" = "doctor"))
+
+cricket_doctor$month <- as.integer(cricket_doctor$month)
+  
+```
+
+
+new plot 
+
+```{r}
+
+library(ggimage)
+library(plotly)
+
+g <- cricket_doctor %>% 
+  ggplot(aes(x = month, y = count)) +
+  geom_line(size = 1.6,  aes(colour= category), show.legend = FALSE) +
+  scale_colour_manual(values = c("#51BB27", "#003b6f")) +
+  geom_image(mapping = aes(x = 1.2, y = 9, image = '~/Desktop/2021/VR_scholarship/Cricket_Who/tardis.png'), size = 0.25) +
+  geom_image(mapping= aes(x = 1.2, y = 32, image = '~/Desktop/2021/VR_scholarship/Cricket_Who/ball.png'), size = 0.13) +
+  theme(rect = element_rect(fill = "transparent")) +
+  theme_bw() + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  scale_x_continuous(breaks = seq(1,12)) +
+  labs(title= "Episodes vs. Games per month",
+                      y="Number of episodes or games", x = "Month")
+g
+
+ggplotly(g) # interactive but no pics 
+  
+  
+
+```
+

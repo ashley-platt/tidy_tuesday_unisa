@@ -1,0 +1,374 @@
+---
+title: "Deaths on eight-thousander mountains"
+author: "Ina Bornkessel-Schlesewsky"
+date: "11/01/2022"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(httr)
+library(rvest)
+library(xml2)
+library(tidyverse)
+library(tidytext)
+library(janitor)
+library(nord)
+library(DT)
+library(wordcloud)
+library(plotly)
+library(gghighlight)
+```
+
+## Location of the 8000ers
+
+![Map showing the location of the 14 eight-thousanders. Source: www.dreamwanderlust.com](8ks-map.png)
+
+## Read data from web, clean and combine
+
+Specify URLs and mountain names
+
+```{r}
+
+wiki_8000er_deaths <- "List of deaths on eight-thousanders"
+wiki_800er <- "Eight-thousander"
+wiki_everest <- "List of people who died climbing Mount Everest"
+
+# eightthousander_names <- c("Everest", "K2", "Kangchenjunga", "Lhotse",
+#                      "Makalu", "Cho Oyu", "Dhaulagiri I", "Manaslu",
+#                      "Nanga Parbat", "Annapurna I", "Gasherbrum I",
+#                      "Broad Peak", "Gasherbrum II", "Shishapangma")
+# 
+
+```
+
+Define function for extracting tables from Wikipedia page of interest and function for converting an html table to a data frame.
+
+```{r}
+
+get_wiki_tables <- function(title){
+    wiki_api <- "https://en.wikipedia.org/w/api.php"
+
+    params <- list(action = "parse", 
+                   page = title, 
+                   format = "xml")
+  
+    webdata <- GET(url = wiki_api, query = params)
+    webdata_xml <- content(webdata)
+  
+    page_html <- read_html(xml_text(webdata_xml))
+    table_elements <- html_nodes(x = page_html, css =".wikitable")
+
+    table_elements
+}
+
+convert_table <- function(wikitable){
+  html_table(wikitable) %>% 
+    clean_names()
+}
+
+```
+
+Create data frame of deaths on all 8000ers apart from Everest
+
+```{r}
+# get mountain names from Wikipedia page on 8000ers
+eightthousanders <- get_wiki_tables(wiki_800er)
+
+eightthou_summary <- html_table(eightthousanders[1])[[1]] %>% 
+  clean_names()
+
+colnames(eightthou_summary) <- eightthou_summary %>% 
+    slice(1) %>% 
+    unlist(use.names = FALSE)
+
+eightthou_summary_cleaned <-  eightthou_summary %>% 
+  janitor::clean_names() %>% 
+  slice(-1) %>% 
+  # add info re mountain range
+  mutate(range = case_when(str_detect(country,"Pakistan") ~ "Karakoram",
+                           TRUE ~ "Himalayas")) %>% 
+  # fix height info
+  mutate(height = as.integer(
+    str_remove(
+      str_extract(height_24,"8,[:digit:]{3}"),
+      ",")))
+
+eightthou_names <- eightthou_summary_cleaned %>% 
+  select(name) %>% 
+  pull()
+
+# get all tables from deaths on 8000ers Wikipedia page
+mountains2_14 <- get_wiki_tables(wiki_8000er_deaths)
+
+# convert html to df; creates a list of dfs
+mountains2_14_dfs <- mountains2_14 %>% 
+  map(convert_table)
+
+# specify names using the list of mountains from other Wikipedia page
+names(mountains2_14_dfs) <- eightthou_names[2:14]
+
+# add mountain names prior to joining dfs
+# not elegant but can't figure out how else to do this at the moment
+for (i in seq(1,length(mountains2_14_dfs))){
+  mountains2_14_dfs[i][[1]] <- mutate(mountains2_14_dfs[i][[1]], 
+         mountain = names(mountains2_14_dfs[i]))
+}
+
+# reduce list to a single df
+deaths_no_everest <- mountains2_14_dfs %>% 
+  reduce(bind_rows) %>% 
+  select(-x,-references)
+  
+```
+
+Add data from Everest
+
+```{r}
+
+everest_deaths <- get_wiki_tables(wiki_everest)[1][[1]] %>% 
+  convert_table() %>% 
+  mutate(mountain = "Everest") %>% 
+  select(date, name, nationality, cause_of_death, mountain)
+
+all_8000er_deaths <- bind_rows(everest_deaths,
+                               deaths_no_everest)
+
+# save to disk just in case
+# saveRDS(all_8000er_deaths, file = "all_8000er_deaths.rds")
+```
+
+## Initial overview
+
+Raw count of deaths on all 14 8000ers.
+
+```{r}
+
+all_8000er_deaths %>% 
+  count(mountain) %>% 
+  mutate(mountain = fct_reorder(mountain,n)) %>% 
+  ggplot(aes(x = n, y = mountain)) +
+  geom_col(fill = "lightseagreen") +
+  labs(
+    x = "Number of deaths",
+    y = "",
+    title = "Deaths on 8000ers"
+  ) +
+  theme_light()
+
+```
+
+However, this is potentially misleading, as it doesn't take into account how many people climb each of these mountains.
+Full (and up-to-date) stats on the number of ascents aren't that easy to find (at least in a way that is automatically accessible), but we can approximate the relative proportions using data from the "Eight-thousander" Wikipedia page (from which we also sourced the mountain names).
+This page lists the total number of ascents between 1950 and 2012 for each mountain; we make the assumption here that the relative proportion has remained similar since 2012.
+
+```{r}
+
+eightthou_ascents <- eightthou_summary_cleaned %>% 
+  select(name, height, total_ascents_c, range) %>% 
+  mutate(total_ascents_c = as.integer(total_ascents_c),
+    prop_ascents = total_ascents_c / sum(total_ascents_c))
+
+```
+
+The proportions are interesting in and of themselves
+
+```{r}
+
+eightthou_ascents %>% 
+  mutate(name = fct_reorder(name,prop_ascents)) %>% 
+  ggplot(aes(x = prop_ascents, y = name, fill = range)) +
+  geom_col() +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(
+    x = "Proportion of ascents (1950-2012)",
+    y = "",
+    title = "Which 8000ers are climbed the most?",
+    fill = "Range"
+  ) +
+  theme_light()
+
+```
+
+Compare this to the height of each mountain
+
+```{r}
+eightthou_ascents %>% 
+  mutate(name = fct_reorder(name,height)) %>% 
+  ggplot(aes(x = height, y = name, colour = range, size = prop_ascents)) +
+  geom_point() +
+  scale_colour_brewer(palette = "Dark2") +
+    labs(
+    x = "Height (m)",
+    y = "",
+    title = "Higher ≠ more ascents",
+    subtitle = "(except for Everest)",
+    colour = "Range"
+  ) +
+  guides(size = "none") +
+  theme_light()
+```
+
+
+Now use the info about ascents to contextualise the number of deaths on each mountain.
+
+```{r}
+all_8000er_deaths %>% 
+  count(mountain) %>% 
+  mutate(prop_deaths = n / sum(n)) %>% 
+  inner_join(eightthou_ascents, by = c("mountain" = "name")) %>% 
+  mutate(deaths_weighted = prop_deaths / prop_ascents,
+         mountain = fct_reorder(mountain,deaths_weighted)) %>% 
+  ggplot(aes(x = deaths_weighted, y = mountain, colour = range)) +
+  geom_point(size = 2) +
+  geom_segment(aes(xend = 1, yend = mountain)) +
+  geom_vline(xintercept = 1, linetype = 2) +
+  scale_colour_brewer(palette = "Dark2") +
+   labs(
+    x = "Ratio of deaths to ascents",
+    y = "",
+    title = "Which 8000ers are deadliest?",
+    colour = "Range"
+  ) +
+  theme_light()
+
+```
+
+## Leading causes of death on 8000ers
+
+```{r}
+
+unigrams <- all_8000er_deaths %>% 
+  mutate(index = row_number()) %>% 
+  unnest_tokens(output = cause_unigrams, input = cause_of_death) %>% 
+  anti_join(stop_words, by = c("cause_unigrams"="word"))
+
+causes <- unigrams %>% 
+  count(cause_unigrams, sort = TRUE) 
+
+
+causes %>% 
+  datatable(caption = "Cause of death (unigrams)",
+            colnames = c("Unigram","Count"))
+
+wordcloud(words = causes$cause_unigrams, freq = causes$n,
+          colors = brewer.pal(8,"Dark2"))
+```
+
+Do these differ per mountain?
+
+```{r}
+
+cause_per_mountain <- unigrams %>% 
+  count(cause_unigrams, mountain) %>% 
+  group_by(mountain) %>% 
+  ungroup()
+
+# function to create a wordcloud for individual mountains
+mountain_cloud <- function(mname){
+  m <- cause_per_mountain %>% 
+    filter(mountain == mname)
+  
+  wordcloud(words = m$cause_unigrams, freq = m$n,
+          colors = brewer.pal(8,"Dark2"))
+}
+
+```
+
+### The three deadliest peaks: Annapurna I, K2, Nanga Parbat
+
+```{r}
+mountain_cloud("Annapurna I")
+
+mountain_cloud("K2")
+
+mountain_cloud("Nanga Parbat")
+```
+
+The reference to "Taliban" in the word cloud for Nanga Parbat reflects the 2013 Nanga Parbat massacre, in which 11 people (10 climbers and a local guide) were killed at base camp by Taliban attackers. The attack was retaliation for a US drone strike that killed a Taliban commander. 
+
+```{r}
+
+all_8000er_deaths %>% 
+  filter(str_detect(cause_of_death,"[Tt]aliban"))
+
+```
+
+### The three least-deadly peaks: Cho Oyu, Gasherbrum II, Everest
+
+```{r}
+mountain_cloud("Cho Oyu")
+
+mountain_cloud("Gasherbrum II")
+
+mountain_cloud("Everest")
+```
+
+## Deadliest years
+
+```{r}
+deaths_per_year <- all_8000er_deaths %>% 
+  mutate(year = as.integer(str_extract(date,"[:digit:]{4}"))) %>% 
+  count(mountain, year, sort = TRUE)
+
+
+p <- deaths_per_year %>% 
+  filter(year >= 2000) %>% 
+  ggplot(aes(x = year, y = n, colour = mountain)) +
+  geom_point() +
+  geom_line() +
+  gghighlight(mountain %in% c("Everest","K2", "Manaslu", "Nanga Parbat")) +
+  scale_colour_brewer(palette = "Dark2") +
+  theme_light() +
+  labs(
+    title = "Deadliest years since 2000",
+    x = "Year",
+    y = "Number of deaths"
+  )
+  
+ggplotly(p)
+```
+
+### Everest 
+
+```{r}
+
+deaths_per_year %>% 
+  filter(mountain == "Everest", year >= 1980) %>% 
+  ggplot(aes(x = year, y = n)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "Deaths on Everest since 1980",
+    x = "Year",
+    y = "Number of deaths"
+  ) +
+  theme_light() +
+  annotate("text", x = 1996, y = 16.5, label = "'Into Thin Air' disaster\n(storm)") +
+  annotate("text", x = 2006, y = 12, label = "Multiple incidents") +
+  annotate("text", x = 2015, y = 18, label = "Nepal earthquake") +
+  annotate("text", x = 2019, y = 13.5, label = "Over-\ncrowding")
+
+deaths_per_year %>% 
+  filter(mountain == "K2", year >= 1980) %>% 
+  ggplot(aes(x = year, y = n)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "Deaths on K2 ('The Savage Mountain') since 1980",
+    x = "Year",
+    y = "Number of deaths"
+  ) +
+  ylim(c(0,15)) +
+  theme_light() +
+  annotate("text", x = 1986, y = 14.5, label = "Storm\n(+ other incidents)") +
+  annotate("text", x = 1995, y = 9, label = "Storm") +
+  annotate("text", x = 2008, y = 12, label = "Serac collapse") +
+  annotate("text", x = 2021, y = 7, label = "Winter\ndeaths")
+  # annotate("text", x = 2019, y = 13.5, label = "Over-\ncrowding")
+```
+
