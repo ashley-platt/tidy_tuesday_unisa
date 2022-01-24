@@ -1,0 +1,208 @@
+---
+title: "Duolingo Data for UniSA TidyTuesday Github"
+output: github_document
+---
+
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(include = TRUE)
+
+library(tidyverse)
+library(magrittr)
+library(janitor)
+library(ggpubr)
+library(mapsf)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(RColorBrewer)
+```
+
+
+```{r read in data}
+duo_data<-read.csv("2022-01-18_duolingo-data_KR.csv")
+head(duo_data)
+```
+
+```{r extract languages}
+
+#collect all unique non-NA levels from pop1, pop2, pop3 as a list
+langs<-unique(c(levels(as.factor(duo_data$pop1)),levels((as.factor(duo_data$pop2))),levels((as.factor(duo_data$pop3)))))
+langs
+
+```
+
+
+```{r create popularity variable for each language}
+
+#add each language in the list to the dataframe, and collect percentage of users from relevant column, depending on rank in which it appeared
+for (l in langs) {
+  duo_data[,l]= case_when (duo_data$pop1==l ~ duo_data$pop1PC, duo_data$pop2==l ~ duo_data$pop2PC, duo_data$pop3==l ~ duo_data$pop3PC)         
+}
+
+#check that this has worked
+colnames(duo_data)
+
+```
+
+```{r restrict to top ranked (most top 3 slots) in order to plot}
+#count non-NAs
+times_ranked<-colSums(!is.na(select(duo_data,English:Vietnamese)))
+
+#put in descending order
+times_ranked<-times_ranked %>%
+  sort(decreasing=TRUE) %>%
+  names()
+
+#add "country" in front
+times_ranked<-append(times_ranked,"country", after=0)
+
+#select data from main dataframe (in new order) and drop empty rows
+toplang<-duo_data %>% 
+  select(all_of(times_ranked)) %>%
+  select(1:6) %>%
+  remove_empty(which= "rows")
+toplang
+
+#pivot to create language variable
+toplang_long <- toplang %>%
+  pivot_longer(cols=c(2:6), names_to = "Language", values_to = "Percentage")
+
+toplang_long
+
+```
+
+
+```{r assign subgroups}
+
+#assign subgroups alphabetically in order to split plot for easier viewing
+toplang_grouped <- toplang_long %>% 
+  arrange(country) %>%
+  mutate(counter = 1 + cumsum(as.integer(factor(country))), 
+         # this counter starting at 1 increments for each country
+         subgroup = as.factor(ceiling(counter/42)))
+
+#check this
+summary(toplang_grouped$subgroup)
+```
+
+```{r create plots with function}
+
+
+#define a function to create plots
+makeplot<-function(s) {
+  toplang_grouped %>%
+    filter(subgroup == s) -> df
+  p1 <-ggplot(df,aes(x = Language, y = country, size=Percentage)) + geom_count() + labs(x="",y="") + theme(axis.text = element_text(angle = 45))+ scale_y_discrete(label = function(x) stringr::str_trunc(x, 12))
+  if (s<4) {
+    p1<-p1 + theme(legend.position="none")
+  }
+  if (s>1) {
+    p1<-p1 
+  }
+  print(p1)
+}
+
+#add to a list
+myplots<-lapply(
+  1:4,makeplot
+)
+
+
+#arrange plots into one figure
+bigplot <- ggpubr::ggarrange(plotlist=myplots, ncol=4, widths = c(1,1,1,1.25) )
+bigplot
+
+#will only display correctly in full screen
+```
+
+
+```{r restrict to duolingo language countries}
+#take language names (used gui to insert quotes, then edited manually to get country names)
+times_ranked %>%
+  toString() %>%
+  print()
+
+#subset by these countries
+duo_countries_top_lang<-subset(toplang_long,country %in% c ("Great-Britain","Spain","France","Germany","Italy","Japan","Portugal","Korea","China","Russia","Turkey","Sweden","Denmark","Tanzania","Ireland","India","Norway","Egypt","Netherlands","Finnland","Greece","Guarana","Israel","Vietnam"))
+
+```
+
+```{r plot just these}
+
+plot2<- ggplot (duo_countries_top_lang, aes(Language,country, size=Percentage)) + geom_count()
+
+plot2
+```
+
+```{r try some mapping!}
+world <- ne_countries(scale = "medium", returnclass ="sf")
+
+DuoMap <- merge(toplang,world, by.x="country", by.y="name", all=TRUE)
+
+plot1<- ggplot(data = DuoMap) + geom_sf(aes(fill=English, size=.1, geometry=geometry))+ scale_size_identity()+
+  ggtitle(paste("Popularity of","English","Amongst Duolingo Users", sep=" "), subtitle = "By Percentage of Total Users in Country")+
+  theme_light()+
+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  scale_fill_distiller(palette="Blues", trans='reverse',na.value="transparent")
+
+plot2<- ggplot(data = DuoMap) + geom_sf(aes(fill=Spanish, size=.1, geometry=geometry))+ scale_size_identity()+
+  ggtitle(paste("Popularity of","Spanish","Amongst Duolingo Users", sep=" "), subtitle = "By Percentage of Total Users in Country")+
+  theme_light()+
+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  scale_fill_distiller(palette="Greens", trans='reverse',na.value="transparent")
+
+plot3<- ggplot(data = DuoMap) + geom_sf(aes(fill=French, size=.1, geometry=geometry))+ scale_size_identity()+
+  ggtitle(paste("Popularity of","French","Amongst Duolingo Users", sep=" "), subtitle = "By Percentage of Total Users in Country")+
+  theme_light()+
+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  scale_fill_distiller(palette="Reds", trans='reverse',na.value="transparent")
+
+plot4<- ggplot(data = DuoMap) + geom_sf(aes(fill=German, size=.1, geometry=geometry))+ scale_size_identity()+
+  ggtitle(paste("Popularity of","German","Amongst Duolingo Users", sep=" "), subtitle = "By Percentage of Total Users in Country")+
+  theme_light()+
+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  scale_fill_distiller(palette="Purples", trans='reverse',na.value="transparent")
+
+
+plot5<- ggplot(data = DuoMap) + geom_sf(aes(fill=Italian, size=.1, geometry=geometry))+ scale_size_identity()+
+  ggtitle(paste("Popularity of","Italian","Amongst Duolingo Users", sep=" "), subtitle = "By Percentage of Total Users in Country")+
+  theme_light()+
+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  scale_fill_distiller(palette="Oranges", trans='reverse',na.value="transparent")
+
+plot1
+plot2
+plot3
+plot4
+plot5
+
+ggsave("plot1.png", plot = plot1)
+ggsave("plot2.png", plot = plot2)
+ggsave("plot3.png", plot = plot3)
+ggsave("plot4.png", plot = plot4)
+ggsave("plot5.png", plot = plot5)
+
+
+```
+
