@@ -1,0 +1,296 @@
+---
+title: "Tidy Tuesday: Bee Colonies"
+author: "Sophie Jano"
+date: "18/01/2022"
+output: 
+  github_document:
+always_allow_html: true
+---
+
+!(\\2021-01-25\\bee1.jpeg)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidytuesdayR)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(tidyverse)
+library(RColorBrewer)
+library(plotly)
+library(geojsonio)
+library(rgdal)
+library(mapproj)
+library(wesanderson)
+
+#load in the data
+
+tuesdata <- tidytuesdayR::tt_load(2022, week = 2)
+
+colony_data <- tuesdata$colony
+
+stress_data <- tuesdata$stressor
+
+#inspect the dataframes
+head(colony_data)
+
+head(stress_data)
+
+#check for missing data
+sum(is.na(colony_data))
+#map(colony_data, ~sum(is.na(.)))
+
+#it seems like for the colony data, the NAs occur because a colony hasn't been lost or added, which is natural
+
+sum(is.na(stress_data))
+#map(stress_data, ~sum(is.na(.)))
+
+#NAs for the stress data are in the percent of colonies affected by a stressor each quarter
+#this might be something that I don't focus on
+
+#check what months are present
+unique(colony_data[c("months")])
+
+
+
+```
+*Colony data*
+
+Let's start with colony data. I'm interested in whether bee colony sizes are increasing or decreasing with time
+
+```{r colonies, warning=FALSE}
+
+col_time <- colony_data %>%
+  ggplot(aes(x = year, y = colony_n)) +
+  geom_point() +
+  theme_minimal() +
+  ylab("number of colonies across the US") +
+  ggtitle("Number of bee colonies over time")
+
+print(col_time)
+
+#this doesn't quite work because for each year, there are a number of samples, as they were taken quarterly
+#let's simplify and see if we can build up
+
+most_colonies <- arrange(colony_data, desc(colony_n))
+
+#after arranging, I realised that there's a 'united states' column, so I can look across all states
+
+US <- colony_data %>%
+  filter(state == "United States")
+
+#let's try plotting again
+
+col_time2 <- US %>%
+  ggplot(aes(x = year, y = colony_n, fill = months)) +
+  geom_point(aes(colour = months, size = colony_lost)) +
+  theme_minimal() +
+  ylab("number of colonies across the US") +
+  labs(size = "number of bee colonies lost") +
+  ggtitle("Bee colonies across the US over time") +
+  scale_fill_brewer(palette = "Set2") 
+  
+
+print(col_time2)
+
+```
+
+It seems like colonies are smallest in January-March and largest in July-September. Some areas with the largest number of colonies have also lost a lot of colonies, although in April-June, colonies seem to lose the least.
+
+This ended up a bit more complicated as a starter, so let's plot a line and see if colony numbers are actually increasing with time
+
+```{r plot line, warning=FALSE}
+
+col_smooth <- US %>%
+  ggplot(aes(x = year, y = colony_n, fill = months)) +
+  geom_smooth(aes(colour = months)) +
+  theme_minimal() +
+  ylab("number of colonies across the US") 
+
+ggplotly(col_smooth)
+
+print(col_smooth)
+
+```
+
+
+I'm not sure why so much of the shading is green, or what this 'chernobyl' error means but this looks kind of cool. The number of bee colonies seems to fluctuate but there is perhaps a very slight increase over time. There's also some missing data for the end of 2021. 
+
+Again, there seems to be the most colonies in July-September (summer/early autumn in the US), and least in winter. During winter, honeybees retreat into the hive to form a cluster to keep warm, so it would probably be quite hard for new colonies to form. When the temperature does rise slightly, the bees leave the hive briefly to relive themselves (how polite!)
+
+There are also winter-ready bees (bees that are more plump), and summer-ready bees. The survival of the hive during winter depends on those winter-ready bees
+
+I want to try plotting using the hexagon shape. I've got an idea from twitter.
+
+```{r hexplot}
+
+
+spdf <- geojson_read("us_states_hexgrid.geojson",  what = "sp")
+
+# Bit of reformating
+spdf@data = spdf@data %>%
+  mutate(google_name = gsub(" \\(United States\\)", "", google_name))
+
+# Show it
+plot(spdf)
+
+# I need to 'fortify' the data to be able to show it with ggplot2 (I think this means make it into a data frame format)
+
+library(broom)
+
+spdf_fortified <- tidy(spdf, region = "google_name")
+
+# Calculate the centroid of each hexagon to add the label:
+library(rgeos)
+
+centers <- cbind.data.frame(data.frame(gCentroid(spdf, byid=TRUE), id=spdf@data$iso3166_2))
+ 
+# Now I can plot this shape easily as described before:
+ggplot() +
+  geom_polygon(data = spdf_fortified, aes( x = long, y = lat, group = group), fill="skyblue", color="white") +
+  geom_text(data=centers, aes(x=x, y=y, label=id)) +
+  theme_void() +
+  coord_map()
+
+
+
+
+```
+
+```{r hex cont}
+
+#now we have to join it with our data
+#but let's first restrict the bee data to 2020 and the summer months
+
+col_jul <- colony_data %>%
+  filter(year == "2020", months == "July-September")
+
+# Merge geospatial and numerical information
+spdf_new <- spdf_fortified %>%
+  left_join(. , col_jul, by=c("id"="state")) 
+ 
+# Make a first chloropleth map
+
+pal <- wes_palette("Zissou1", 40, type = "continuous")
+
+#make colony_n a factor so we can use it with a continuous scale
+spdf_new$colony_n <- as.factor(spdf_new$colony_n)
+
+
+ggplot() +
+  geom_polygon(data=spdf_new, aes(fill = colony_n, x= long, y = lat, group = group)) +
+  geom_text(data=centers, aes(x = x, y = y, label=id), color="white", size=3, alpha=0.6) +
+  scale_fill_manual(values = pal, name = "Number of Colonies") +
+  theme_void() +
+  coord_map() +
+  ggtitle("Bee colonies across the US in the summer months of 2020") +
+  theme(plot.title = element_text(hjust = 1))
+
+
+```
+
+Now let's look at the number of colonies in the winter months
+
+```{r hex winter}
+
+#now we have to join it with our data
+#but let's first restrict the bee data to 2020 and the summer months
+
+col_jan <- colony_data %>%
+  filter(year == "2020", months == "January-March")
+
+# Merge geospatial and numerical information
+spdf_new2 <- spdf_fortified %>%
+  left_join(. , col_jan, by=c("id"="state")) 
+ 
+# Make a first chloropleth map
+
+pal <- wes_palette("Zissou1", 40, type = "continuous")
+
+#make colony_n a factor so we can use it with a continuous scale
+spdf_new2$colony_n <- as.factor(spdf_new2$colony_n)
+
+
+ggplot() +
+  geom_polygon(data=spdf_new2, aes(fill = colony_n, x= long, y = lat, group = group)) +
+  geom_text(data=centers, aes(x = x, y = y, label=id), color="white", size=3, alpha=0.6) +
+  scale_fill_manual(values = pal, name = "Number of Colonies") +
+  theme_void() +
+  coord_map() +
+  ggtitle("Bee colonies across the US in the winter months of 2020") +
+  theme(plot.title = element_text(hjust = 1))
+
+
+
+
+```
+
+
+We can see that consistently, the coldest states in the US have the least bee colonies in summer and in winter. In winter there seems to be an overall decrease in most places, with hardly any bright red hexes. It is strange though that there seems to be a lot of colonies in California in winter... have I made an error?
+
+Upon doing some more reading, it seems that bee colonies in CA do quite well over winter because the winter is quite mild compared to other states. The bees can continue foraging and don't need to shut down. Perhaps bees migrate to CA from other states when they get cold?
+
+In winter, millions of bees apparently travel to CA for a big ALMOND HARVEST. Let's look at this further by examining the colonies added in california across the months.
+
+```{r california plotting}
+
+ca_data <- colony_data %>%
+  filter(state == "California")
+
+
+ca_data %>%
+  ggplot(aes(x = year, y = colony_added, colour = months)) +
+  geom_point(size = 3) +
+  theme_minimal() +
+  ylab("bee colonies added") +
+  ggtitle("Bee colonies added in California over time")
+
+
+
+```
+
+Now let's look at stress data, I want to see the most common stressor. This is already in percent which is great!
+
+```{r stress}
+
+stress_2021 <- stress_data %>%
+  filter(year == 2021, state == 'United States')
+
+#make the palette
+pal2 <- wes_palette("FantasticFox1", 6, type = "continuous")
+
+#pie chart
+#note 'stress_pct' is the percent of colonies affected by the stressor
+stress_pie <- ggplot(stress_2021, aes(x = "", y = stress_pct, fill = stressor)) +
+  geom_bar(stat = "identity", width = 1, colour = "white") +
+  coord_polar("y" , start = 0) +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = rev(pal2)) +
+  theme_void() +
+  ggtitle("Most common bee colony stressors in the United States in 2021") 
+
+stress_pie
+
+```
+
+
+Varroa mites seem to be the most common stressor. This is taken from Wkipedia: "The Varroa mite can reproduce only in a honey bee colony. It attaches to the body of the bee and weakens the bee."
+
+Also we have an 'other' and an 'unknown' group, I'm not sure what the difference is between them
+
+
+##Thank you!
+
+!(\\2021-01-25\\bee2.jpeg)
+
+
+
+
+
+
+
+
+
+
+
