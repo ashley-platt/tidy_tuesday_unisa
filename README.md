@@ -2,6 +2,10 @@
 
 Welcome to the UniSA Tidy Tuesday repository!
 
+Quick links:
+
+- [2022 sessions](archives/2022/README.md)
+
 Here you can find information in the following folders- 
 
 - archives: previous tidy tuesday outputs (Rmd and html) 
