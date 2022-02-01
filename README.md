@@ -21,13 +21,19 @@ Option 2: Upload your files to the repository yourself.
 
 -----
 
-Required files to send/submit (in a folder with the naming convention YYYY-MM-DD). 
-   - RmD file (check that this can be knitted). 
-      - use naming convention: YYYY-MM-DD_(topic name)_(INITIALS)
+Required files to send/submit (in a folder with the naming convention YYYY-MM-DD):
+   - Rmd file (check that this can be knitted). 
+      - Use naming convention: YYYY-MM-DD_(topic name)_(INITIALS)
          - e.g., 2021-11-07_cricket_AP *note that the date is for the session!
+      - Make sure your script is reproducible on other computers (e.g., call images/data from a common folder '/2021-11-07/cricket.png'). 
    - A knitted Github document of the Rmd (output: github_document) with the acompanying output folder/files. 
+      - If this produces an error, try changing the output to:
+         output: 
+            github_document:
+         always_allow_html: true
    - Any images or supporting material required to run the script (e.g., images for plotting). 
-      - Hint: check previous weeks' folders if you are unsure of anything. 
+
+Hint: check previous weeks' folders if you are unsure of anything. 
 
 -----
 
