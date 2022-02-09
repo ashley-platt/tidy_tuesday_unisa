@@ -7,6 +7,6 @@
 | `2022-01-11` | Deaths on 8000er mountains | Wikipedia: [main data set](https://en.wikipedia.org/wiki/List_of_deaths_on_eight-thousanders); supplementary data from [here](https://en.wikipedia.org/wiki/List_of_people_who_died_climbing_Mount_Everest) and [here](https://en.wikipedia.org/wiki/Eight-thousander) | [Ina](./2022-01-11/high_mountain_deaths_IBS.md) | N/A |
 | `2022-01-18` | Duolingo | [Duolingo](https://docs.google.com/spreadsheets/d/1B_JFAT4W-XF5umi-ty1bHhrc8858Vi4AvwqziT9jF84/edit#gid=0); [see also](https://blog.duolingo.com/global-language-report-2020/) | [Kate](./2022-01-18/2022-01-18_duolingo_KR.md) | N/A |
 | `2022-01-25` | Bee colony losses (TT week 2 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-11/readme.md) | [Sophie](./2022-01-25/2022-01-25_bee-colonies_SJ.md) | N/A |
-| `2022-02-01` | Movie scripts text analysis | own curation | Vina | TBA |
-| `2022-02-08` | Board games (TT week 4 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-25/readme.md) | Hayley & Kate | TBA |
-| `2022-02-15` | TBA | TBA | Tom | TBA |
+| `2022-02-01` | Movie scripts text analysis | own curation | [Vina](./2022-02-01/2022-02-01_movie_script_analyses_VT.Rmd) | TBA |
+| `2022-02-08` | Board games (TT week 4 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-25/readme.md) | [Hayley](./2022-02-08/HC/2022-02-08_board-games_HC.md) & [Kate](./2022-02-08/KR/2022-02-08_board-games_KR.md) | [Hayley (Shiny App)](./2022-02-08/HC/Game_Night_Assistant/app.R) |
+| `2022-02-15` | Text Adventures | [Lucid Manager](https://lucidmanager.org/data-science/text-adventure/) | Tom | TBA |
