@@ -9,4 +9,6 @@
 | `2022-01-25` | Bee colony losses (TT week 2 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-11/readme.md) | [Sophie](./2022-01-25/2022-01-25_bee-colonies_SJ.md) | N/A |
 | `2022-02-01` | Movie scripts text analysis | own curation | [Vina](./2022-02-01/2022-02-01_movie_script_analyses_VT.Rmd) | TBA |
 | `2022-02-08` | Board games (TT week 4 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-25/readme.md) | [Hayley](./2022-02-08/HC/2022-02-08_board-games_HC.md) & [Kate](./2022-02-08/KR/2022-02-08_board-games_KR.md) | [Hayley (Shiny App)](./2022-02-08/HC/Game_Night_Assistant/app.R) |
-| `2022-02-15` | Text Adventures | [Lucid Manager](https://lucidmanager.org/data-science/text-adventure/) | Tom | TBA |
+| `2022-02-15` | No session this week | N/A | N/A | N/A |
+| `2022-02-22` | Text Adventures | [Lucid Manager](https://lucidmanager.org/data-science/text-adventure/) | Tom | TBA |
+| `2022-03-01` | TBA | TBA | Zach | TBA |
