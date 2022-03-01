@@ -11,5 +11,7 @@
 | `2022-02-08` | Board games (TT week 4 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-25/readme.md) | [Hayley](./2022-02-08/HC/2022-02-08_board-games_HC.md) & [Kate](./2022-02-08/KR/2022-02-08_board-games_KR.md) | [Hayley (Shiny App)](./2022-02-08/HC/Game_Night_Assistant/app.R) |
 | `2022-02-15` | No session this week | N/A | N/A | N/A |
 | `2022-02-22` | Text Adventures | [Lucid Manager](https://lucidmanager.org/data-science/text-adventure/) | [Tom](./2022-02-22/2022-02-22_adventure_TD.R) | N/A |
-| `2022-03-01` | Chocolate Bar Rating (TT week 3 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-18/readme.md) | Anna & Christina | TBA |
-| `2022-03-08` | TBA | TBA | Zach | TBA |
+| `2022-03-01` | Chocolate Bar Rating (TT week 3 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-18/readme.md) | [Anna](./2022-03-01/AA/2022-03-01_Chocolate_AA.md) & Christina | N/A |
+| `2022-03-08` | Neural activity and team-work during a semi-naturalistic task | Imogen's PhD | Zach | TBA |
+| `2022-03-15` | TBA | TBA | TBA | TBA |
+| `2022-03-22` | TBA | TBA | Imogen & Gloria | TBA |
