@@ -13,5 +13,6 @@
 | `2022-02-22` | Text Adventures | [Lucid Manager](https://lucidmanager.org/data-science/text-adventure/) | [Tom](./2022-02-22/2022-02-22_adventure_TD.R) | N/A |
 | `2022-03-01` | Chocolate Bar Rating (TT week 3 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-18/readme.md) | [Anna](./2022-03-01/AA/2022-03-01_Chocolate_AA.md) & [Christina](./2022-03-01/CW/2022-03-01_chocolate_CW.md) | N/A |
 | `2022-03-08` | Neural activity and team-work during a semi-naturalistic task | Imogen's PhD | Zach | TBA |
-| `2022-03-15` | TBA | TBA | TBA | TBA |
+| `2022-03-15` | Wordle | Own Curation | Hayley | TBA |
 | `2022-03-22` | TBA | TBA | Imogen & Gloria | TBA |
+| `2022-03-29` | Pythy Tuesday | TBA | Alex & Sophie | TBA |
