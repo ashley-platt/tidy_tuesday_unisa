@@ -15,4 +15,4 @@
 | `2022-03-08` | Neural activity and team-work during a semi-naturalistic task | Imogen's PhD | Zach | TBA |
 | `2022-03-15` | Wordle | Own Curation | Hayley | TBA |
 | `2022-03-22` | TBA | TBA | Imogen & Gloria | TBA |
-| `2022-03-29` | Pythy Tuesday | TBA | Alex & Sophie | TBA |
+| `2022-03-29` | TBA | TBA | Alex & Sophie | TBA |
