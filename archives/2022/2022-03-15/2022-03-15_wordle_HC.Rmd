@@ -1,0 +1,384 @@
+---
+title: "2022-03-15_wordle_HC"
+author: "Hayley Caldwell"
+date: "14/03/2022"
+output: github_document
+editor_options: 
+  chunk_output_type: inline
+---
+## Wordle Data
+
+Wordle is a daily online brain-teaser game, currently hosted by the New York Times. Each day, players must guess a mystery 5 letter word in 6 attempts or less to pass. For every guess, letters turn green if they are in the correct place, yellow if they are in the mystery word but in the wrong place, and grey if they are incorrect. Wordle has become incredibly popular in the past few months, going from 90 (early Jan 2022) to over 2 million (mid Jan 2022) people playing every day and sharing their scores online.   
+
+(See wordle_data_HC for the creation of these data)
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(install = FALSE, update = FALSE, tidyverse, plotly, ggimage, ggalt, ggpubr, shiny, shinythemes, pipeR, plotly, wordcloud)
+
+w_words <- read.csv("D:\\Tidy_Tuesday\\Wordle\\2022-03-15\\wordle_words.csv")
+
+# https://www.kaggle.com/rtatman/english-word-frequency
+uni_freq <- read.csv("D:\\Tidy_Tuesday\\Wordle\\2022-03-15\\unigram_freq.csv") 
+
+# sentiment nrc
+# http://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm
+nrc <- read.csv("D:\\Tidy_Tuesday\\Wordle\\2022-03-15\\nrc_sentiment.csv")
+nrc <- nrc %>% select(word, Positive, Negative, Anger, Anticipation, Disgust, Fear, Joy, Sadness, Surprise, Trust)
+
+```
+
+```{r joining } 
+
+# join uni_freq
+  # rename columns 
+w_words1 <- w_words %>% 
+  rename(word = answer)
+  # lowercase 
+w_words1$word <- tolower(w_words1$word) 
+  # join 
+w_answ_freq <- left_join(w_words1, uni_freq) %>% 
+  rename(word_freq = count)
+
+
+# join the sentiment data
+wordle_nrc <- left_join(w_answ_freq, nrc) %>% 
+  na.omit() 
+
+```
+
+After reading in the files with the data I'm interested in, and joining various datasets, I decided to see which Wordle answers have the highest letter frequency scores. 
+
+```{r word with highest letter frequency}
+
+w_words %>% 
+  select(answer, letter_freq_total, mean_attempts) %>% 
+  distinct() %>% 
+  slice_max(letter_freq_total, n = 10)
+
+```
+
+Then, I thought a better way to show this would be to use a word cloud. 
+
+```{r word clouds letter freq}
+
+w_words %>%
+  select(answer, letter_freq_total) %>%
+  distinct() %>% 
+  with(wordcloud(answer, letter_freq_total, scale=c(1.8,0.1), colors = "#AD1DA5")) 
+
+```
+
+I also made a word cloud for the word frequency...
+
+```{r word cloud word freq}
+
+w_answ_freq %>%
+  select(word, word_freq) %>%
+  distinct() %>% 
+  with(wordcloud(word, word_freq, scale=c(5,1), colors = "#FF5100")) 
+
+```
+
+... as well as for the mean scores. 
+
+```{r word clouds mean scores}
+
+w_words %>%
+  select(answer, mean_attempts) %>%
+  distinct() %>% 
+  with(wordcloud(answer, mean_attempts, scale=c(1.6,0.05), color = "#01AF64")) 
+
+```
+
+Next, I wanted to view various trends in the data. 
+
+```{r percentage of people with each score across letter frequency}
+
+# character attempts (for geom area)
+w_answ_freq$attempts <- as.character(w_answ_freq$attempts)
+
+ggplot(w_answ_freq, aes(x = letter_freq_total, y = perc_attempts, fill = attempts)) +
+  geom_area() +
+  labs(y = 'Percentage Per Score', 
+       x = "Letter Frequency Scores", 
+       title = "Wordle Score Distribution Across Letter Frequency")
+
+```
+
+
+```{r average scores across letter frequency }
+
+ggplot(w_words, aes(x = letter_freq_total, y = mean_attempts)) +
+  geom_smooth() +
+  labs(y = 'Mean Scores', 
+       x = "Letter Frequency Scores", 
+       title = "Wordle Mean Scores Across Letter Frequency")
+
+```
+
+
+```{r percentage of people with each score across word frequency}
+
+ggplot(w_answ_freq, aes(x = word_freq, y = perc_attempts, fill = attempts)) +
+  geom_area() +
+  scale_x_continuous(labels = scales::comma) +
+  labs(y = 'Percentage Per Score', 
+       x = "Word Frequency", 
+       title = "Wordle Score Distribution Across Word Frequency")
+
+```
+
+```{r average scores across word frequency}
+
+avg_attempts_freq <- ggplot(w_answ_freq, aes(x = word_freq, y = mean_attempts)) +
+  geom_smooth() +
+  scale_x_continuous(labels = scales::comma)+
+  labs(y = 'Mean Scores', 
+       x = "Word Frequency", 
+       title = "Wordle Mean Scores Across Word Frequency")
+avg_attempts_freq
+
+# ggplotly(avg_attempts_freq)
+
+```
+
+```{r percentage of people with each score across time }
+
+ggplot(w_answ_freq, aes(x = wordle_id, y = perc_attempts, fill = attempts)) +
+  geom_area() +
+  labs(y = 'Percentage Per Score', 
+       x = "Wordle No.", 
+       title = "Wordle Score Distribution Across Time")
+
+```
+
+```{r average scores across time }
+
+ggplot(w_words, aes(x = wordle_id, y = mean_attempts)) +
+  geom_smooth() +
+  labs(y = 'Mean Scores', 
+       x = "Wordle No.", 
+       title = "Wordle Mean Scores Across Time")
+
+```
+
+Then, I decided to see if word sentiment impacted Wordle scores. 
+
+```{r positive v negative}
+
+wordle_nrc1 <- wordle_nrc %>% 
+  select(word, mean_attempts, attempts, perc_attempts, Positive, Negative)%>%
+  filter(Positive==1|Negative==1) %>%
+  pivot_longer(cols = Positive:Negative, names_to = 'valence', values_to = "Yes/No") %>%
+  filter(`Yes/No` == 1) %>%
+  select(-`Yes/No`) %>%
+  group_by(valence) %>% 
+  mutate(val_mean = mean(mean_attempts)) %>% 
+  ungroup() %>% 
+  select(valence, val_mean) %>% 
+  distinct()
+
+ggplot(wordle_nrc1, aes(x = valence, y = val_mean, fill = valence)) +
+  geom_col() +
+  labs(y = 'Mean Scores', 
+       x = "Valence", 
+       title = "Wordle Mean Scores By Valence")
+
+```
+
+```{r joy v sadness}
+
+wordle_nrc2 <- wordle_nrc %>% 
+  select(word, mean_attempts, attempts, perc_attempts, Joy, Sadness)%>%
+  filter(Joy==1|Sadness==1) %>%
+  pivot_longer(cols = c(Joy,Sadness), names_to = 'emotion', values_to = "Yes/No") %>%
+  filter(`Yes/No` == 1) %>%
+  select(-`Yes/No`) %>%
+  group_by(emotion) %>% 
+  mutate(emo_mean = mean(mean_attempts)) %>% 
+  ungroup() %>% 
+  select(emotion, emo_mean) %>% 
+  distinct()
+
+ggplot(wordle_nrc2, aes(x = emotion, y = emo_mean, fill = emotion)) +
+  geom_col() +
+  labs(y = 'Mean Scores', 
+       x = "Emotion", 
+       title = "Wordle Mean Scores By Emotion")
+
+```
+
+
+## How to cheat in Wordle
+
+```{r}
+
+# https://www.kaggle.com/bcruise/wordle-valid-words?select=valid_solutions.csv
+valid_solutions <- read.csv("D:\\Tidy_Tuesday\\Wordle\\2022-03-15\\valid_solutions.csv")
+
+w_solutions1 <- left_join(valid_solutions, uni_freq) %>% 
+  mutate(letters = word) %>% 
+  separate(letters, into = c("L0", "L1", "L2", "L3", "L4", "L5"), sep = "") %>% 
+  select(-L0) %>% 
+  rename(word_freq = count)
+
+```
+
+Firstly, I tried to make a shiny app, however I ran into many problems. 
+- every slot needed to have a value. I set a default value to something common for all words (i.e. a "." at the end).
+
+- but, the str_detect was not a fan of ! or negate = TRUE for both the "." and regular letters, I have no idea why. 
+
+- as I couldn't come up with a solution, I decided to try to make 1 function.
+
+```{r}
+
+x <- c("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r",
+       "s","t","u","v","w","x","y","z")
+
+wordle_helper <- function(data, GL1=".", GL2=".", GL3=".", GL4=".", GL5=".", YL1=".", YL2=".", YL3=".", YL4=".", YL5=".", YLM=".", Grey="."){
+  data1 <- data %>% 
+    filter(
+      if(GL1 != "."){L1 %in% GL1} 
+      else {L1 %in% x},
+      if(GL2 != "."){L2 %in% GL2} 
+      else {L1 %in% x}, 
+      if(GL3 != "."){L3 %in% GL3} 
+      else {L1 %in% x}, 
+      if(GL4 != "."){L4 %in% GL4} 
+      else {L1 %in% x}, 
+      if(GL5 != "."){L5 %in% GL5}
+      else {L1 %in% x},
+      if(YL1 != "."){str_detect(word, YL1)}
+      else {L1 %in% x}, 
+      if(YL2 != "."){str_detect(word, YL2)} 
+      else {L1 %in% x},
+      if(YL3 != "."){str_detect(word, YL3)}
+      else {L1 %in% x},
+      if(YL4 != "."){str_detect(word, YL4)}
+      else {L1 %in% x},
+      if(YL5 != "."){str_detect(word, YL5)}
+      else {L1 %in% x},
+      if(YLM != "."){str_detect(word, YLM)} #misc
+      else {L1 %in% x},
+      if(YL1 != "."){!str_detect(L1, YL1)}
+      else {L1 %in% x},
+      if(YL2 != "."){!str_detect(L2, YL2)}
+      else {L1 %in% x},
+      if(YL3 != "."){!str_detect(L3, YL3)}
+      else {L1 %in% x},
+      if(YL4 != "."){!str_detect(L4, YL4)}
+      else {L1 %in% x},
+      if(YL5 != "."){!str_detect(L5, YL5)}
+      else {L1 %in% x},
+      if(Grey != "."){!str_detect(word, Grey)}
+      else {L1 %in% x}) %>% 
+    arrange(-word_freq)
+  return(print(data1$word))}
+
+# Green e.g., GL1 = "x"
+# Yellow e.g., YL1 = "x" 
+  # Yellow Misc. e.g., YLM = "x" OR [xxxx]"
+# Grey e.g., Grey = "x" OR "[xxxx]"
+
+# GL1=".", GL2=".", GL3=".", GL4=".", GL5=".", YL1=".", YL2=".", YL3=".", YL4=".", YL5=".", YLM=".", Grey="."
+
+wordle_helper(data = w_solutions1, GL1="a", YL2="a", Grey="[ioled]")
+# add YLM="m",
+
+wordle_helper(data = w_solutions1, GL1="s", YL2="l", YL4="t", YL5="[e]", Grey="a")
+# add YLM="m",
+
+# str_detect YLs doesnt make multiple listed compulsory 
+  # make YL a list, and do a loop of str_detect filters?
+
+```
+
+However, after getting excited that I have just invented the newest app sensation, I quickly realised that this function had no way of dealing with multiple yellow letters in the same position. str_detect treats detecting characters as x or y, not x and y. Hence, I added a miscellaneous yellow letter argument to compromise. 
+
+But ultimately becasue compromises suck, I tried to have the function loop through the multiple characters in a string of possible yellow letters. This turned out to be a very painful experience. 
+
+Here are some of my attempts to make this work. 
+
+Exhibit A: the turducken
+```{r}
+
+# if(YL1 != "."){
+#        for (i in seq_along(YL1)){
+#          str_detect(word, YL1[i])}} 
+#      else {L1 %in% x}, 
+
+```
+
+Exhibit B: the anti-pipe duo
+```{r}
+
+#  if(YL1 != "."){
+#    data2 <- data1 %>%
+#      for (i in seq_along(YL1)){
+#        filter(str_detect(data1$word, YL1[i]))}} 
+#   else {data2 <- data1 %>% filter(L1 %in% x)}
+
+```
+
+Exhibit C: the Dory
+```{r}
+
+# if(a1 != "."){
+#  for (i in seq_along(a1)){
+#    data6 <- data5 %>% filter(str_detect(word, a1[i]))}
+#  } else {data6 <- data5 %>% filter(L1 %in% x)}
+
+```
+
+Exhibit D: the elephant behind a pole
+```{r}
+
+# YL_yes <- function(YL) {
+#  for (i in seq_along(YL)){
+#    str_detect(word, YL[i])}}
+
+# YL_pos <- function(YL) {
+#  for (i in seq_along(YL)){
+#    !str_detect(L1, YL[i])}}
+
+```
+
+Exhibit E: Episode IV - a new hope
+```{r}
+
+# Green 
+greenL <- function(.data, pos, letter) {
+  .data %>% 
+    filter({{pos}} %in% letter)
+}
+
+# Yellow
+yellowL <- function(.data, pos, letter) {
+  .data %>% 
+    filter(str_detect(word, letter)) %>% 
+    filter(!str_detect({{pos}}, letter))
+}
+
+# Grey 
+greyL <- function(.data, letter) {
+  .data %>% 
+    filter(!str_detect(word, letter))
+}
+
+# greenL(L, "") %>% 
+# yellowL(L, "") %>% 
+# greyL("[]") %>%
+
+w_solutions1 %>% 
+  yellowL(L1, "r") %>% 
+  greenL(L2, "o") %>% 
+  yellowL(L4, "u") %>% # need this double Y in L4
+  yellowL(L4, "n") %>%
+  greyL("[slated]") %>% 
+  arrange(-word_freq) %>% 
+  pull(word)
+
+```
+
