@@ -14,6 +14,6 @@
 | `2022-03-01` | Chocolate Bar Rating (TT week 3 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-01-18/readme.md) | [Anna](./2022-03-01/AA/2022-03-01_Chocolate_AA.md) & [Christina](./2022-03-01/CW/2022-03-01_chocolate_CW.md) | N/A |
 | `2022-03-08` | Neural activity and team-work during a semi-naturalistic task | Imogen's PhD | Zach | N/A |
 | `2022-03-15` | Wordle | [Own Curation](./2022-03-15/wordle_words.csv) [(See details)](./2022-03-15/wordle_data_HC.md) | [Hayley](./2022-03-15/2022-03-15_wordle_HC.md) | N/A |
-| `2022-03-22` | Dog Breeds (TT week 5 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-02-01/readme.md) | Imogen & Gloria | TBA |
+| `2022-03-22` | Dog Breeds (TT week 5 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-02-01/readme.md) | [Imogen](./2022-03-22/2022-03-22_dogs_IW.md) & [Gloria](./2022-03-22/2022-03-22_dogs_GC.md) | N/A |
 | `2022-03-29` | TBA | TBA | Chloe & Vina | TBA |
 | `2022-04-05` | TBA | TBA | TBA | TBA |
