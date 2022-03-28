@@ -1,0 +1,458 @@
+---
+title: "Week5_TidyTues_IW"
+author: "Imogen Weigall"
+date: "17/03/2022"
+output: github_document
+---
+
+### Loading in the Data
+```{r loading in data, message=FALSE, warning=FALSE}
+
+breed_traits <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-02-01/breed_traits.csv')
+trait_description <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-02-01/trait_description.csv')
+breed_rank_all <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-02-01/breed_rank.csv')
+
+breed_traits
+trait_description
+breed_rank_all
+
+```
+
+
+## Dog Breeds Data Set
+
+Each year, Americans purchase nearly 1 million purebred dogs.These dogs are registered through the American Kennel Club (AKC), which categorizes and tallies up the totals of more than 150 breeds.
+VOX has created a dataset of these registrations going back 80 years — and what we found shows that Americans’ taste in dogs has dramatically changed over time.
+
+breed_rank_all : Source - American Kennel Club : To identify the 50 most popular breeds in the United States, 24/7 Tempo reviewed data from the American Kennel Club released in March 2021, based on 2020 AKC registration statistics
+
+Influences on Dog Choice: Movies + Mimic choices of others (Friends/Family/Neighbours)
+
+Hypothesis: "breeds enjoy heydays of approximately 25 years … [which] usually allows for two to three generations of dogs, as the breed transforms from novel to passé."
+
+This would suggest that the Labrador retriever is nearing the end of it’s reign (it has topped the list for exactly 25 years now). But Gina DiNardo, who currently serves as the vice president of the American Kennel Club, says that’s not going to happen any time soon.
+
+The cocker spaniel has long since faded as America’s favorite dog, however, it still holds the record for most years at the top (26), thanks to a resurgence in the 1980s.
+
+```{r loading in libraries, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(dplyr)
+
+#plots
+library(ggplot2)
+library(janitor)
+library(ggfx)
+library(ggforce)
+library(patchwork)
+library(ggimage)
+library(ggbump)
+library(here)
+##fonts
+library(ggtext)
+library(showtext)
+library(sysfonts)
+##colour
+library(rcartocolor)
+library(RColorBrewer)
+
+```
+
+
+### First I wanted to look at the latest rankings of dogs - what dogs are recently most popular.
+
+```{r top 10 dogs of 2020, error=FALSE, message=FALSE}
+
+#creating a new df filtering for top 10 ranked breeds in 2020
+
+top_10_2020 <- breed_rank_all %>% 
+  clean_names() %>% 
+  select(breed, x2020_rank, image) %>% 
+  head(10) %>%
+    mutate(breed = str_wrap(breed, 18) %>% fct_reorder(., x2020_rank))
+ 
+#janitor package used to clean up spacing in col names
+#str_wrap breed name for future use in ggplot
+#fct_reorder to ensure factors are ordered in decending order of rank
+
+
+top_10_2020
+
+
+##Plotting
+
+p1 <- ggplot(top_10_2020) +
+  geom_image(aes(x = 1, y = 1, image = image),
+            size = 0.95) +
+  as_reference(
+    geom_tile(aes(1, 1, fill = x2020_rank),
+              height = 1, 
+              width = 1,
+              alpha = 0.2),
+    id = "tile"
+  ) +
+  with_blend(
+    geom_image(aes(x = 1, y = 1, image = image),
+               size = 0.95),
+    bg_layer = "tile",
+    flip_order = TRUE,
+    blend_type = "pegtop_light",
+    alpha = "src"
+  ) +
+  geom_text(aes(1, 1, label = x2020_rank, colour = x2020_rank),
+            hjust = 0.5,
+            vjust = 0.5,
+            family = "mono",
+            fontface = "bold",
+            size = 6) +
+  scale_x_continuous(limits = c(0, 2)) +
+  scale_y_continuous(limits = c(0, 2)) +
+  scale_fill_gradient(high = "#008db9", low = "#f26d78", guide = "none", aesthetics = c("fill", "colour")) +
+  facet_wrap(. ~ breed, ncol = 3) +
+  coord_equal(expand = FALSE) +
+  labs(title = "TOP 10 DOGS of 2020",
+       caption = "Source: American Kennel Club courtesy of KKakey  |  #TidyTuesday 2022 W5  | adapted from @quite_grey") +
+  theme(panel.background = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        plot.title = element_text(size = 20, family = "mono", face = "bold", hjust = 0.5),
+        plot.caption = element_text(size = 5, family = "mono", face = "bold", hjust = 0.5),
+        strip.text = element_text(size = 4, family = "mono", face = "bold", vjust = 0),
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        plot.title.position = "plot",
+        plot.caption.position = "plot")
+
+print(p1)
+
+```
+
+### Why are Labradors so popular?
+
+"Labs are easy to train and get along great with people and other dogs, are easy to please, and have a friendly disposition. They shed, but not an unbearable amount. They’re good with water. They’re also very versatile: People can live with them in a variety of settings — cities, country, apartments, houses."
+
+
+#### I then wanted to look at the top ranked dogs over time - to see whether there has been any substantial change
+
+```{r top ranked dogs over time, error = FALSE, message=FALSE, warning=FALSE}
+
+##creating df
+
+top_10_time <- breed_rank_all %>%
+  clean_names() %>%
+  pivot_longer(x2013_rank:x2020_rank,
+               names_to = "year",
+               values_to = "rank") %>%
+  mutate(year = parse_number(year),
+         # This puts Dachshunds below everything so the line does not show
+         # and French Bulldogs on top of everything to highlight the gains
+         breed = factor(breed,
+                        levels = c("Dachshunds",
+                                   "Retrievers (Labrador)",
+                                   "German Shepherd Dogs",
+                                   "Retrievers (Golden)",
+                                   "Beagles",
+                                   "Bulldogs",
+                                   "Yorkshire Terriers",
+                                   "Boxers",
+                                   "Poodles",
+                                   "Rottweilers",
+                                   "Pointers (German Shorthaired)",
+                                   "Pembroke Welsh Corgis",
+                                   "French Bulldogs"))) %>%
+  filter(rank <= 10) %>%
+  group_by(breed) %>%
+  mutate(first_year = year == min(year),
+         last_year = year == max(year)) %>%
+  ungroup() 
+
+top_10_time
+
+##formatting
+
+font <- "Trebuchet MS"
+title_font <- "Candara"
+fontcolor <- "gray30"
+bcolor <- "white"
+
+theme_set(theme_minimal(base_size = 12, base_family = font))
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.grid.major = element_blank(),
+  
+  panel.background = element_rect(fill = bcolor, color = NA),
+  plot.background = element_rect(fill = bcolor, color = NA),
+  
+  axis.title.y = element_text(size = 12, color = fontcolor, angle = 0, vjust = 0.98),
+  axis.title.x = element_blank(),
+  axis.text = element_text(size = 12, color = fontcolor),
+  axis.ticks = element_blank(),
+  axis.line = element_blank(),
+  
+  plot.title.position = "plot",
+  plot.title = element_markdown(size = 20, color = fontcolor, family = title_font),
+  
+  plot.subtitle = element_markdown(size = 12, color = fontcolor),
+  
+  plot.caption.position = "plot",
+  plot.caption = element_markdown(size = 8, color = fontcolor),
+  
+  plot.margin = margin(t = 10, r = 10, b = 10, l = 10)
+)
+
+
+```
+```{r plotting top_10_time, warning=FALSE, error=FALSE}
+
+##plot
+# this plot was adapted from @datasciencejenn (Jenn Schillings) code available on Twitter
+
+p2 <- ggplot() +
+  geom_bump(data = top_10_time,
+            mapping = aes(x = year,
+                          y = rank,
+                          group = breed,
+                          color = breed),
+            smooth = 15, size = 2.5) +
+  geom_image(data = top_10_time %>% filter(first_year == TRUE | last_year == TRUE),
+             mapping = aes(x = year,
+                           y = rank,
+                           image = image),
+             size = 0.07) +
+  geom_text(data = top_10_time %>% filter(first_year == TRUE | last_year == TRUE),
+            mapping = aes(x = year,
+                          y = rank,
+                          label = breed),
+            nudge_y = -0.5,
+            color = fontcolor,
+            family = font,
+            size = 3) +
+  scale_y_reverse(breaks = seq(from = 1, to = 10)) +
+  scale_x_continuous(breaks = seq(from = 2013, to = 2020),
+                     limits = c(2012.7, 2021.2)) +
+  scale_color_brewer(palette = "Spectral") +
+  coord_cartesian(clip = "off") +
+  guides(color = "none") + ggtitle( "Top Ranked Dogs from 2013 to 2020") + ylab("Rank")
+
+print(p2)
+
+
+```
+ 
+
+ As you can see Labradors have consistently remained the top ranked dog. We have seen an exponential climb of the french bulldog.   
+
+
+```{r traits, error=FALSE, message=FALSE, warning=FALSE}
+
+#selecting the traits we want to plot
+traits <- trait_description$Trait[c(1,4, 10, 11, 13)]
+
+#creating a new df with breed and traits
+top_3_trait<- breed_traits[1:3,] %>%
+  select(Breed, traits) 
+
+#checking df is how we want it
+top_3_trait
+
+#Plot
+
+#This plot has been adapted from Paula LC on Twitter @elartedeldato . Inspired by their plot of Top 8 dog breed traits I decided to give it a go for myself. 
+
+##Formatting
+
+#Selecting font type
+#Google has a fonts repository in from which you can source any font from a selection
+font_add_google(name = "Bitter", family = "Thin 100")
+showtext_auto()
+font_family <- 'Thin 100'
+
+colors <- carto_pal(5, 'BluYl')
+bg_color <- 'honeydew'
+text_color <- '#111111'
+font_size <- 5
+
+caption_title <- '#TidyTuesday Week 5, 2022 | Source: American Kennel Club '
+
+p3 <- ggplot() +
+  # Footprints
+  geom_ellipse(aes(x0 = 0, y0 = 33, a = 3, b = 5, angle = 0.5, m1 = 2), fill = colors[pull(top_3_trait[1,],2)], color=bg_color) +
+  geom_ellipse(aes(x0 = 6, y0 = 40, a = 3.5, b = 5, angle = 0, m1 = 2), fill = colors[pull(top_3_trait[1,],3)], color=bg_color) +
+  geom_ellipse(aes(x0 = 14, y0 = 40, a = 3.5, b = 5, angle = 0, m1 = 2), fill = colors[pull(top_3_trait[1,],4)], color=bg_color)  +
+  geom_ellipse(aes(x0 = 21, y0 = 33, a = 3, b = 5, angle = 2.5, m1 = 2), fill = colors[pull(top_3_trait[1,],5)], color=bg_color) +
+  geom_ellipse(aes(x0 = 10, y0 = 26, a = 7, b = 7, angle = 3, m1 = 2), fill = colors[pull(top_3_trait[1,],6)], color=bg_color) +
+  annotate(geom='text', label=top_3_trait$Breed[1], x=10, y=16, color=text_color, family=font_family, size=font_size) +
+
+  geom_ellipse(aes(x0 = 0+40, y0 = 33, a = 3, b = 5, angle = 0.5, m1 = 2), fill = colors[pull(top_3_trait[2,],2)], color=bg_color) +
+  geom_ellipse(aes(x0 = 6+40, y0 = 40, a = 3.5, b = 5, angle = 0, m1 = 2), fill = colors[pull(top_3_trait[2,],3)], color=bg_color) +
+  geom_ellipse(aes(x0 = 14+40, y0 = 40, a = 3.5, b = 5, angle = 0, m1 = 2), fill = colors[pull(top_3_trait[2,],4)], color=bg_color)  +
+  geom_ellipse(aes(x0 = 21+40, y0 = 33, a = 3, b = 5, angle = 2.5, m1 = 2), fill = colors[pull(top_3_trait[2,],5)], color=bg_color) +
+  geom_ellipse(aes(x0 = 10+40, y0 = 26, a = 7, b = 7, angle = 3, m1 = 2), fill = colors[pull(top_3_trait[2,],6)], color=bg_color) +
+  annotate(geom='text', label=top_3_trait$Breed[2], x=10+40, y=16, color=text_color, family=font_family, size=font_size)  +
+
+  geom_ellipse(aes(x0 = 0+80, y0 = 33, a = 3, b = 5, angle = 0.5, m1 = 2), fill = colors[pull(top_3_trait[3,],2)], color=bg_color) +
+  geom_ellipse(aes(x0 = 6+80, y0 = 40, a = 3.5, b = 5, angle = 0, m1 = 2), fill = colors[pull(top_3_trait[3,],3)], color=bg_color) +
+  geom_ellipse(aes(x0 = 14+80, y0 = 40, a = 3.5, b = 5, angle = 0, m1 = 2), fill = colors[pull(top_3_trait[3,],4)], color=bg_color)  +
+  geom_ellipse(aes(x0 = 21+80, y0 = 33, a = 3, b = 5, angle = 2.5, m1 = 2), fill = colors[pull(top_3_trait[3,],5)], color=bg_color) +
+  geom_ellipse(aes(x0 = 10+80, y0 = 26, a = 7, b = 7, angle = 3, m1 = 2), fill = colors[pull(top_3_trait[3,],6)], color=bg_color) +
+  annotate(geom='text', label=top_3_trait$Breed[3], x=10+80, y=16, color=text_color, family=font_family, size=font_size)  +
+
+
+  # Legend Footprint
+  geom_ellipse(aes(x0 = 1+110, y0 = 73, a = 2, b = 4, angle = 0.5, m1 = 2), fill = '#84a59d', color= '#84a59d') +
+  annotate(geom='text', label="Affective", x=1+110, y=70, size=4, hjust=1.2, family=font_family, color= '#84a59d') +
+  geom_ellipse(aes(x0 = 5+110, y0 = 80, a = 2.5, b = 4, angle = 0, m1 = 2), fill = '#84a59d', color= '#84a59d') +
+  annotate(geom='text', label="Hair Shedding", x=5+110, y=80, size=4, hjust=1.3, family=font_family, color= '#84a59d') +
+  geom_ellipse(aes(x0 = 13+110, y0 = 80, a = 2.5, b = 4, angle = 0, m1 = 2), fill = '#84a59d', color= '#84a59d')  +
+  annotate(geom='text', label="Playfulness", x=13+110, y=80, size=4, hjust=-0.3, family=font_family, color= '#84a59d') +
+  geom_ellipse(aes(x0 = 18+110, y0 = 73, a =2, b = 4, angle = 2.5, m1 = 2), fill = '#84a59d', color= '#84a59d') +
+  annotate(geom='text', label="Protectiveness", x=18+110, y=70, size=4,  hjust=-0.1, family=font_family, color= '#84a59d') +
+  geom_ellipse(aes(x0 = 9+110, y0 = 69, a = 5, b = 5, angle = 3, m1 = 2), fill = '#84a59d', color= '#84a59d') +
+  annotate(geom='text', label="Trainability", x=9+110, y=65, size=4, vjust=3, family=font_family, color= '#84a59d') +
+  coord_equal() +
+  theme_void() +
+  annotate(geom='text', label='Dog Breed Profiles', x=-10, y=80, size=15, hjust=0, family=font_family, color=text_color) +
+  annotate(geom='text', label='Main dog traits for the top 3 dog breeds.',size=7, x=-10, y=65, hjust=0, family=font_family, color=text_color) +
+  annotate(geom='text', label='The darker the colour means higher score of this trait.', size=7, x=-10, y=60, hjust=0, family=font_family, color=text_color) +
+  labs(caption=caption_title) +
+  theme(plot.background = element_rect(fill=bg_color, color=bg_color),
+        plot.margin=margin(1,1,1,1,'cm'),
+        plot.caption=element_text(family=font_family, size=7, margin=margin(10,1,1,1)))
+
+print(p3)
+
+```
+
+
+```{r Borkers, error=FALSE, message=FALSE, warning=FALSE}
+
+# Who's the biggest woofers?
+
+borkers <- breed_traits %>%
+  select(Breed, "Barking Level") %>% clean_names()
+
+#exploring with visualisations
+ggplot(borkers) + geom_col( aes(x = breed, y = barking_level, fill = breed)) +
+    theme(axis.text.x = element_text(angle=90, hjust=1), legend.position = "none") +
+  ylab("Level of Bork") +
+  ggtitle("Barking Level by Breed")
+#this is too hectic - Let's cut this down a little
+
+top_borkers <- filter(borkers, barking_level == 5)
+
+top_borkers
+
+##Barkers in the Top 10 of 2020
+top_10_borkers <- breed_traits[1:10,] %>%
+  select(Breed, "Barking Level") %>% clean_names() %>% arrange((barking_level)) 
+
+#setting image file path
+#users will need to change this path to where they downloaded and stored the dog_images folder
+#image_path <- here('/Users/imogenweigall/LabTidyTuesday/week5_dogbreeds/dog_images')
+
+#here(image_path)
+
+library(here)
+
+#plot
+p4 <- ggplot(top_10_borkers) + geom_col( aes(x = breed, y = barking_level, fill = breed)) +
+    theme(axis.text.x = element_text(angle=90, hjust=1, size = 8), legend.position = "none", axis.title.y = element_text(angle=90)) +
+  ylab("Bork Level") +
+  xlab("Breed") +
+  ggtitle("Who is the biggest woofer in the top 10 ranked dogs for 2020? ") + 
+  geom_image(x = 1, y = 4, aes(image= here('dog_images','beagle.jpeg')), size = 0.08) +
+  geom_image(x = 2, y = 1.859, aes(image = here('dog_images', 'bulldog.png')), size = 0.08) +
+  geom_image(x = 3, y = 5, aes(image = here('dog_images','dachshund.jpeg')), size = 0.08) +
+  geom_image(x = 4, y = 1.20, aes(image = here('dog_images','frenchbulldog.jpeg')), size = 0.08) +
+  geom_image(x = 5, y = 3, aes(image = here('dog_images', 'german_shepard.jpeg')), size = 0.08) +
+  geom_image(x = 6, y = 3, aes(image = here('dog_images', 'pointer.jpeg')), size = 0.08) +
+  geom_image(x = 7, y = 4, aes(image = here('dog_images','poodle.jpeg')), size = 0.08) +
+  geom_image(x = 8, y = 1, aes(image = here('dog_images','goldenretriever.jpeg')), size = 0.08) +
+  geom_image(x = 9, y = 3, aes(image = here('dog_images','labrador.jpeg')), size = 0.08) +
+  geom_image(x = 10, y = 1, aes(image = here('dog_images','rotweiler.jpeg')), size = 0.08)
+  
+p4
+
+## wanting to create a plot with images overlayed
+
+#For some reason I am unable to get the Images to join properly to the data set by 'breed'
+#breed_rank_all1 <- breed_rank_all %>% clean_names()
+#borkers_wpics <- left_join(borkers, breed_rank_all1$image, by = "breed", copy = TRUE)
+#tried to clean names in breed_rank_all df so that all consistent - but will still miss joining some of the key images
+
+#Temporary solution: imported own images to use in plot
+
+```
+
+### Webscraping
+For my own development I wanted to try webscraping some other related data - I chose to webscrape puppy prices. I found the following website: https://www.petbudget.com/puppy-prices/
+
+```{r web scraping, warning=FALSE}
+library(rvest)
+library(xml2)
+library(dplyr)
+
+
+dog_price_page <- read_html("https://www.petbudget.com/puppy-prices/") 
+
+dog_price_page
+
+#importing table data from webpage
+
+table <- dog_price_page %>% html_table(fill = TRUE, header = TRUE) 
+
+table
+
+#using table information to create new df
+dog_price <- as.data.frame(table)
+#cleaning names in df
+dog_price <- dog_price %>% clean_names()
+#removing the $ from all cols - the \\ is an escape character
+dog_price <- lapply(dog_price, gsub, pattern="\\$", replacement="")
+
+dog_price <- as.data.frame(dog_price)
+
+dog_price
+#now looks how we want it but the variables are not in the class we want
+#checking the class
+sapply(dog_price, class)
+
+# changing the class
+
+dog_price$average_price <- as.numeric(dog_price$average_price)
+
+dog_price
+
+#plotting output - to keep it simple lets look at the top 10 most expensive dogs
+
+spenny_dogs <- dog_price %>% 
+  select(breed, average_price) %>% arrange(average_price) %>% tail(10)
+
+spenny_dogs
+
+p5 <- ggplot(spenny_dogs) + geom_col( aes(x = breed, y = average_price, fill = breed)) +
+    theme(axis.text.x = element_text(angle=90, hjust=1, size = 5), legend.position = "none") +
+  ylab("$$ (US)") +
+  ggtitle("Top 10 Most Expensive Pups in the US")
+
+print(p5)
+
+#look at prices of top 10 ranked dogs
+
+
+
+
+```
+
+
+## Thank you for listening
+
+
+
+
+
+
+
+

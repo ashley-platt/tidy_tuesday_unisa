@@ -1,0 +1,44 @@
+---
+title: "Shiny_quiz_GC"
+output: html_document
+---
+
+```{r}
+library(shiny)
+
+#Setting Up the User Interface
+ui <- fluidPage( 
+  h2("Best Pup for you Quiz"), #h2 comes form html style and simply is determining basically the text size
+  selectInput("UserInput",  # This is the name of the variable the User Input will be saved to
+              "How do you describe yourself?", #This is what will be displayed for the user
+              choices = c("","fun-loving",
+                          "gentle", 
+                          "hard-working",
+                          "outgoing")), 
+  h4(textOutput("Result")) # h4 is text size again; here will be the Output send to 
+) 
+server <- function(input, output){  # this is the function body for the App evaluating Input
+  BestPupForYouQuiz =function(q.c){  # Your function (could be also set outside of shiny body)
+    if (q.c == "fun-loving"){
+      QuizResult="A cheeky Pembroke Welsh Corgi is the one for you!"
+    } else if (q.c == "gentle") {
+      QuizResult="Our mischievous Italian Greyhound chose you! Bellisimo"
+    } else if (q.c == "hard-working"){
+      QuizResult="Fair go mate! Dont be devvo but you got yourself an Australian Shepherd"
+    } else if(q.c == "outgoing"){
+      QuizResult="Dogs are by far my most family friendly animal. I Shih Tzu not"
+    }else{
+      QuizResult=""
+    }
+    return(QuizResult)
+  }
+  output$Result <- renderText({  #render is observing any change of the input
+    BestPupForYouQuiz(input$UserInput) # is taken users, handing over to the function
+                                  # the function's result will be finally send to the Output
+  })
+}  
+
+shinyApp(ui = ui, server = server)
+```
+
+
