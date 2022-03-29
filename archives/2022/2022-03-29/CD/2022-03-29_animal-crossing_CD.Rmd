@@ -1,0 +1,372 @@
+---
+title: "Animal Crossing Exploration"
+author: "Chloe Dziego"
+date: "25/03/2022"
+output:
+  github_document: null
+  'github_document:': default
+always_allow_html: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(vembedr)
+library(cvms)
+library(DT)
+library(tidymodels)
+library(tidytext)
+library(textrecipes)
+library(stopwords)
+library(lubridate)
+library(magick)
+library(glmnet)
+library(doParallel)
+library(vip)
+
+critic <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/critic.tsv')
+user_reviews <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/user_reviews.tsv')
+items <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/items.csv')
+villagers <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/villagers.csv')
+
+```
+
+## Introduction to Animal Crossing
+
+Animal Crossing: New Horizons is a 2020 life simulation video game developed and published by Nintendo for the Nintendo Switch. It is the fifth main series title in the Animal Crossing series. New Horizons was released in all regions on March 20, 2020.
+
+New Horizons sees the player assuming the role of a customizable character who moves to a deserted island after purchasing a package from Tom Nook, a tanuki character who has appeared in every entry in the Animal Crossing series. Taking place in real-time, the player can explore the island in a nonlinear fashion, gathering and crafting items, catching insects and fish, and developing the island into a community of anthropomorphic animals.
+
+The data this week comes from the [VillagerDB](https://github.com/jefflomacy/villagerdb) and [Metacritic](https://www.metacritic.com/game/switch/animal-crossing-new-horizons/critic-reviews).
+
+### A Short Example of Gameplay
+
+```{r example gameplay, echo = FALSE}
+
+embed_url("https://www.youtube.com/watch?v=MzarFCCAdY0")
+
+```
+
+### Vina and I
+
+![Vina's Animal Crossing fMRI](vina.jpg) ![Chloe's Animal Crossing Desk](chloe.jpg)
+
+&nbsp;
+
+## What data do we get for this week's tidytuesday?
+
+&nbsp;
+
+```{r pressure, echo=FALSE}
+
+#critic (professional) reviews
+datatable(critic)
+
+#user (player) reviews
+datatable(user_reviews)
+
+#items in the game
+print(items)
+
+#villager profiles in the game
+print(villagers)
+
+```
+
+&nbsp;
+
+### Brief look at reviews...
+
+First, I want to see what the general patterns of ratings are for both the critics and the players (i.e., users). In this case, user_reviews are from 0-10 while critics ratings are from 0-100. 
+
+```{r histograms, echo = FALSE, comments = FALSE, warnings = FALSE}
+
+critic %>% 
+  ggplot(aes(grade)) +
+  geom_histogram(fill = "coral") +
+  labs(x = "Score", y = "Frequency", title = "Frequency of Ratings (Critics)") +
+  theme_light() +
+  xlim(0, 100)
+
+user_reviews %>% 
+  ggplot(aes(grade)) +
+  geom_histogram(fill = "lightgreen") +
+  labs(x = "Score", y = "Frequency", title = "Frequency of Ratings (Players)") +
+  theme_light()
+
+```
+
+**Note.** We are seeing completely different patterns of ratings for professional critics vs. players. 
+
+&nbsp;
+
+### Sample of review text...
+
+```{r zoom in on text, echo = TRUE}
+
+#sample of text from the player reviews
+user_reviews %>%
+  filter(grade < 5) %>%
+  sample_n(5) %>%
+  pull(text)
+
+#sample of text from the professional reviews
+critic %>%
+  filter(grade > 90) %>%
+  sample_n(5) %>%
+  pull(text)
+
+```
+
+**Note.** For user_reviews, some not in English, some double text (copied first sections), ...Expand included in some reviews. For critics, data is a bit tidier.
+
+&nbsp;
+
+## TidyModels 
+
+I have wanted to play with the tidymodels package for a very long time. Here, I have used a walkthrough by [Julia Silge]((https://juliasilge.com/blog/animal-crossing/)) to help me get my head around it! Step one is prepare and split the dataset into training/test data.
+
+```{r sentiment analysis}
+
+#prepare and split the dataset into training/test data
+prep_player <- user_reviews %>%
+  mutate(text = str_remove(text, "Expand$"),
+         rating = case_when(grade > 6 ~ "Good",
+                            TRUE ~ "Bad"))
+words <- prep_player %>% 
+  unnest_tokens(word, text) %>%
+  count(user_name, name = "total_words")
+
+set.seed(123)
+
+user_split <- initial_split(prep_player, strata = rating)
+train_set <- training(user_split)
+test_set <- testing(user_split)
+
+```
+
+&nbsp;
+
+### Creating a 'recipe' for preprocessing steps using **textrecipes**.
+
+Basic pipeline steps:
+
+* Specify the basic model
+* 'Tokenize' (split into words)
+* Take out unecessary words (stopwords) 
+* Filter for top 500 words only 
+* Create a token_frequency dataframe
+* Normalize data.
+
+*"Step_normalize creates a specification of a recipe step that will normalize numeric data to have a standard deviation of one and a mean of zero."*
+
+```{r}
+
+data_rec <- recipe(rating ~ text, data = train_set) %>%
+  step_tokenize(text) %>%
+  step_stopwords(text) %>%
+  step_tokenfilter(text, max_tokens = 500) %>%
+  step_tfidf(text) %>%
+  step_normalize(all_predictors())
+
+model_prep <- prep(data_rec)
+
+#View the recipe
+model_prep
+
+#Have a look a the data that comes out of the recipe.
+juice(model_prep)
+
+```
+
+Specify what type of model we want to work from. Here, we have a binary outcome (good or bad rating), so the model is a logistic regression. Model parameters are amount of regularisation (penalty) and proportion of lasso penalty (mixture). 
+
+A value of mixture = 1 corresponds to a pure lasso model, while mixture = 0 indicates ridge regression.
+
+*"In statistics and machine learning, lasso (least absolute shrinkage and selection operator; also Lasso or LASSO) is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the resulting statistical model. The penalty parameter has no default and requires a single numeric value. For more details about this, and the glmnet model in general, see glmnet-details."*
+
+*"Regularization is a technique used for tuning the function by adding an additional penalty term in the error function. The additional term controls the excessively fluctuating function such that the coefficients don’t take extreme values. This technique of keeping a check or reducing the value of error coefficients are called shrinkage methods or weight decay in case of neural networks.."*
+
+An example youtube video: https://www.youtube.com/watch?v=NGf0voTMlcs.
+
+Here, penalty = tune() is because we are unsure yet which is the best parameter.
+
+```{r}
+
+model_spec <- logistic_reg(penalty = tune(), mixture = 1) %>%
+  set_engine("glmnet")
+
+model_workflow <- workflow() %>%
+  add_recipe(data_rec) %>%
+  add_model(model_spec)
+
+model_workflow
+
+```
+
+&nbsp;
+
+### Tune model parameters...
+
+Can we find which penalty is the best fit for our model?
+
+```{r}
+
+grid_values <- grid_regular(penalty(), levels =5)
+
+#make some resamples of the data to tune the model parameters
+set.seed(123)
+data_resamples <- bootstraps(train_set, strata = rating, times = 5)
+
+doParallel::registerDoParallel()
+
+set.seed(2020)
+model_grid <- tune_grid(model_workflow,
+                        resamples = data_resamples,
+                        grid = grid_values,
+                        metrics = metric_set(roc_auc, ppv, npv))
+
+#Examine tuning results
+model_grid %>%
+  collect_metrics()
+
+model_grid %>%
+  collect_metrics() %>%
+  ggplot(aes(penalty, mean, color = .metric)) +
+  geom_line(size = 1.5, show.legend = FALSE) +
+  facet_wrap(~.metric) +
+  scale_x_log10()
+
+```
+
+"Positive predictive value (PPV) defines the probability of having the state/disease of interest in a subject with positive result (B+|T+). Therefore PPV represents a proportion of patients with positive test result in total of subjects with positive result (TP/TP+FP).
+
+Negative predictive value (NPV) describes the probability of not having a disease in a subject with a negative test result (B-|T-). NPV is defined as a proportion of subjects without the disease with a negative test result in total of subjects with negative test results (TN/TN+FN)." 
+
+[Definitions found here.](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4975285/)
+
+"AUC - ROC curve is a performance measurement for the classification problems at various threshold settings. ROC is a probability curve and AUC represents the degree or measure of separability. It tells how much the model is capable of distinguishing between classes. Higher the AUC, the better the model is at predicting 0 classes as 0 and 1 classes as 1. By analogy, the Higher the AUC, the better the model is at distinguishing between patients with the disease and no disease."
+
+[Definitions found here.](https://towardsdatascience.com/understanding-auc-roc-curve-68b2303cc9c5)
+
+&nbsp;
+
+### Specify the final model...
+
+```{r}
+
+best_auc <- model_grid %>%
+  select_best("roc_auc")
+
+best_auc
+
+final_model <- finalize_workflow(model_workflow, best_auc)
+
+```
+
+&nbsp;
+
+### Fit the final model & look at the strongest predictors.
+
+```{r}
+
+final_model %>%
+  fit(train_set) %>%
+  pull_workflow_fit() %>%
+  vi(lambda = best_auc$penalty) %>%
+  group_by(Sign) %>%
+  top_n(20, wt = abs(Importance)) %>%
+  ungroup() %>%
+  mutate(
+    Importance = abs(Importance),
+    Variable = str_remove(Variable, "tfidf_text_"),
+    Variable = fct_reorder(Variable, Importance)
+  ) %>%
+  ggplot(aes(x = Importance, y = Variable, fill = Sign)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~Sign, scales = "free_y") +
+  labs(y = NULL)
+
+```
+
+&nbsp;
+
+### Check the fit...
+
+```{r}
+
+review_final <- last_fit(final_model, user_split)
+
+review_final %>%
+  collect_metrics()
+
+```
+
+*"We did not overfit during our tuning process, and the overall accuracy is not bad. Let’s create a confusion matrix for the testing data."*
+
+&nbsp;
+
+### Check how it works and plot. 
+
+```{r}
+
+review_final %>%
+  collect_predictions() %>%
+  conf_mat(rating, .pred_class)
+
+confusion_data <- review_final %>%
+  collect_predictions() %>%
+  conf_mat(rating, .pred_class)
+
+cfm <- as.data.frame(confusion_data[1]) %>%
+  mutate(prop = table.Freq/sum(table.Freq))
+
+ggplot(data = cfm, mapping = aes(x = table.Truth, y = table.Prediction, alpha = prop)) +
+  geom_tile() +
+  geom_text(aes(label = table.Freq), vjust = .5, fontface  = "bold", alpha = 1) +
+  scale_fill_manual(values = c(good = "green", bad = "red")) +
+  theme_bw() +
+  labs(x = "True Rating", y ="Model's Prediction")
+
+
+```
+
+This tidymodel example comes from:
+https://juliasilge.com/blog/animal-crossing/ &nbsp;
+https://www.youtube.com/watch?v=whE85O1XCkg&t=91s
+
+&nbsp;
+
+## BONUS: Writing a Function
+
+I haven't yet written a function... so I thought I'd try with villager's birthdays. The idea here is to enter a birthdate, and it returns villagers of the same birthdate.
+
+```{r find birthday}
+
+#change the format of the date to make the function more straight-forward.
+villagers <- villagers %>% 
+  separate(birthday, sep="-", into = c("month", "day"))
+
+find_birthday <- function(d, m, y) {
+  rows <- filter(villagers, month == m & day == d)
+  return(rows)
+}
+
+find_birthday(3, 9, 1998)
+
+#extend this function to create an image/poster of the villagers with the same birthday.
+find_birthday <- function(d, m, y) {
+  rows <- filter(villagers, month == m & day == d)
+  picture <- image_read(rows$url)
+  print(picture[1])
+  return(rows)
+}
+
+find_birthday(19, 9, 1998)
+  
+```
+
+Image processing package: https://www.datanovia.com/en/blog/easy-image-processing-in-r-using-the-magick-package/
