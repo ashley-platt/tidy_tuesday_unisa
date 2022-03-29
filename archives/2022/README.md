@@ -15,5 +15,5 @@
 | `2022-03-08` | Neural activity and team-work during a semi-naturalistic task | Imogen's PhD | Zach | N/A |
 | `2022-03-15` | Wordle | [Own Curation](./2022-03-15/wordle_words.csv) [(See details)](./2022-03-15/wordle_data_HC.md) | [Hayley](./2022-03-15/2022-03-15_wordle_HC.md) | N/A |
 | `2022-03-22` | Dog Breeds (TT week 5 2022) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-02-01/readme.md) | [Imogen](./2022-03-22/2022-03-22_dogs_IW.md) & [Gloria](./2022-03-22/2022-03-22_dogs_GC.md) | N/A |
-| `2022-03-29` | TBA | TBA | Chloe & Vina | TBA |
+| `2022-03-29` | Animal Crossing (TT week 19 2020) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-05-05/readme.md) | [Chloe](./2022-03-29/CD/2022-03-29_animal-crossing_CD.Rmd) & [Vina](./2022-03-29/VT/2022-03-29_animal-crossing_VT.md) | N/A |
 | `2022-04-05` | TBA | TBA | TBA | TBA |
