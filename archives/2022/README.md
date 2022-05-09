@@ -19,5 +19,5 @@
 | `2022-04-05` | No session this week (sessions are now fortnightly) | N/A | N/A | N/A |
 | `2022-04-26` | No session this week | N/A | N/A | N/A |
 | `2022-05-10` | Create Your Own R Packages | TBA | Ashley | TBA |
-| `2022-05-24` | aRm | TBA | Maya (TBC) | TBA |
+| `2022-05-24` | aRm | TBA | Maya | TBA |
 | `2022-06-07` | TBA | TBA | TBA | TBA |
