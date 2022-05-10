@@ -18,6 +18,6 @@
 | `2022-03-29` | Animal Crossing (TT week 19 2020) | [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-05-05/readme.md) | [Chloe](./2022-03-29/CD/2022-03-29_animal-crossing_CD.Rmd) & [Vina](./2022-03-29/VT/2022-03-29_animal-crossing_VT.md) | N/A |
 | `2022-04-12` | Cricket Stats (sessions are now fortnightly) | [CricSheet](https://cricsheet.org/) | Ina | N/A |
 | `2022-04-26` | No session this week | N/A | N/A | N/A |
-| `2022-05-10` | Create Your Own R Packages | TBA | Ashley | TBA |
+| `2022-05-10` | Create Your Own R Packages | N/A | [Ashley](./2022-05-10/2022-05-10_DIYpackages_AP.Rmd) | N/A |
 | `2022-05-24` | aRm | TBA | Maya | TBA |
 | `2022-06-07` | TBA | TBA | TBA | TBA |
