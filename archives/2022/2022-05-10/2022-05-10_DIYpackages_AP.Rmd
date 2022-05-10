@@ -1,0 +1,105 @@
+---
+title: "DIY Packages"
+author: "Ashley Platt"
+date: "May 10th 2022"
+output: revealjs::revealjs_presentation
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r include=FALSE}
+library(devtools)
+library(roxygen2)
+library(tidyverse)
+```
+
+
+## What do we need to make our own package? {data-background=#e5f6df}
+
+- *Important libraries* 
+    - roxygen2
+    - devtools
+- *A purpose*
+    - e.g. a package which helps to streamline Tidy Tuesday analyses 
+
+## What will our package contain? {data-background=#e5f6df}
+- *functions*
+  - help files
+  - r files 
+- *internal data*
+- *analysis template*
+
+## Let's make a package {data-background=#e5f6df}
+
+- package is called *tthelp* 
+- creating a package can be done;
+  - via file --> new project --> new directory --> r package
+
+- this creates a new directory which includes 
+  - DESCRIPTION
+  - NAMESPACE
+  - two folders; man & R
+  
+- fun extra: add a start up message!
+  
+From here you can begin to build up your package. 
+
+## Let's start with functions {data-background=#e5f6df}
+
+- common purpose of creating packages is to hold your regularly used functions 
+- I created 3 key functions for my package *tthelp*
+  - *ttread*    :read in and summarise data from tidytuesdayR package
+  - *ttwhich*   :indicate the most appropriate geoms based on x and y variable type
+  - *ttgeom*    :plot a range of geoms
+  
+- Hint: use roxygensie() to create "help" page
+
+  
+**we can start with the basics of hello**
+
+## Adding internal data {data-background=#e5f6df}
+
+- another common purpose of user-generated packages is to self-contain your own data analysis
+- packages can also hold internal data 
+  - I used the *baby_names* TT data set to act as my internal data 
+  
+- internal data can be added by 
+  - use_this :: use_data_raw("generate_internal")
+  - this creates an R script in *data_raw* when you can put the code which     generates and save your own data
+
+
+## Creating templates {data-background=#e5f6df}
+
+- now I wanted to add a RMarkdown template within my package to help guide TT analysis and the use of my functions 
+
+- used the code below to create a subdirectory within my package directory 
+  - usethis::use_rmarkdown_template("Template Name")
+  
+## Creating templates cont. {data-background=#e5f6df}
+
+- this creates 
+  - *inst* folder 
+    - *rmarkdown* folder
+      - *templates* folder
+        - *package_name* folder 
+          - *skeleton* folder
+            - *skeleton* rmd
+- edit the rmd file to create your template 
+
+- let's look at the template I made!
+
+## Finished? {data-background=#e5f6df}
+
+- use install() to install your package onto your computer
+- now we can load this library into a new project, and use the templates and data it makes available 
+
+e.g. devtools::install("/Users/ashleyplatt/Desktop/tthelp")
+
+
+## Any questions? {data-background=#e5f6df}
+  
+
