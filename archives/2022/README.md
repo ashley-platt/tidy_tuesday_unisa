@@ -19,5 +19,6 @@
 | `2022-04-12` | Cricket Stats (sessions are now fortnightly) | [CricSheet](https://cricsheet.org/) | Ina | N/A |
 | `2022-04-26` | No session this week | N/A | N/A | N/A |
 | `2022-05-10` | Create Your Own R Packages | N/A | [Ashley](./2022-05-10/2022-05-10_DIYpackages_AP.Rmd) | N/A |
-| `2022-05-24` | aRm | TBA | Maya | TBA |
-| `2022-06-07` | TBA | TBA | TBA | TBA |
+| `2022-05-24` | No session this week | N/A | N/A | N/A |
+| `2022-06-07` | aRm | TBA | Maya | TBA |
+| `2022-06-21` | TBA | TBA | TBA | TBA |
