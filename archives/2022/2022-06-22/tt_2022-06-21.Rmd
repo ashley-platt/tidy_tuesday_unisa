@@ -1,0 +1,178 @@
+---
+title: "TidyTuesday - Live coding session"
+author: "Ina Bornkessel-Schlesewsky"
+date: "21/06/2022"
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Code from a TidyTuesday live coding session. The NYT Bestsellers list data set was chosen at the beginning of the session.
+
+This document includes several small updates / improvements that were added after the session. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggsci)
+library(cowplot)
+# the following packages are for accessing the sales data from Wikipedia
+library(httr)
+library(rvest)
+library(xml2)
+
+
+```
+
+## Read data
+
+The direct downloads seems to work best to read the tsv files.
+
+```{r}
+
+nyt_titles <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-10/nyt_titles.tsv')
+nyt_full <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-10/nyt_full.tsv')
+
+
+```
+
+## Who has held the top spot for longest?
+
+Initial exploration: which books were at #1 of the bestseller list for longest?
+
+Note the use of the native pipe `|>` in this script. It provides an alternative option for piping to the `%>%` pipe from the **magrittr** package, which is loaded when you load the **tidyverse**. The two pipes work similarly in many, but not all contexts. See [this blog post](https://ivelasq.rbind.io/blog/understanding-the-r-pipe/) for a useful summary.
+
+```{r}
+
+# look at the range of years in the data first
+range(nyt_full$year)
+
+# titles with highest no of weeks at #1
+nyt_full |> 
+  filter(rank == 1) |> 
+  count(title, sort = TRUE)
+
+# add year for more information
+# this doesn't quite do what we want as it splits up the count by year
+nyt_full |> 
+  filter(rank == 1) |> 
+  count(title, year, sort = TRUE)
+
+# improved version
+# added after the session
+top_titles <- nyt_full |> 
+  filter(rank == 1) |> 
+  count(title, year) |> 
+  group_by(title) |> 
+  mutate(total_weeks = sum(n),
+         # note the use of glue to insert variables into strings
+         years = glue::glue("{min(year)}-{max(year)}")) |> 
+  select(title, total_weeks, years) |> 
+  ungroup() |> 
+  distinct() |> 
+  arrange(-total_weeks)
+
+top_titles
+
+```
+
+Some additional exploration that didn't go anywhere. (The idea was to isolate all titles that were at no. 1 at some point and use this as a starting point for further analysis. However, this was abandoned quite quickly to allow us to move on to other things.)
+
+```{r}
+no1_titles <- nyt_full |> 
+  filter(rank == 1) |> 
+  select(title) |> 
+  pull() |> 
+  unique()
+
+nyt_full |> 
+  filter(title %in% no1_titles) 
+
+```
+
+
+## Add sales data
+
+The TT data set does not include any information on how many books were actually sold. We can add this from Wikipedia.
+
+Define functions for wikipedia table access (taken / adapted from TT session on High Mountain Deaths from January 2022):
+
+```{r}
+get_wiki_tables <- function(title){
+    wiki_api <- "https://en.wikipedia.org/w/api.php"
+
+    params <- list(action = "parse", 
+                   page = title, 
+                   format = "xml")
+  
+    webdata <- GET(url = wiki_api, query = params)
+    webdata_xml <- content(webdata)
+  
+    page_html <- read_html(xml_text(webdata_xml))
+    table_elements <- html_nodes(x = page_html, css =".wikitable")
+
+    table_elements
+}
+
+convert_table <- function(index){
+  html_table(sales_tables[index])[[1]] |>  
+    janitor::clean_names() |> 
+    # first_published varies in type
+    # coerce to integer to allow joining of dfs
+    mutate(first_published = as.integer(first_published))
+}
+
+```
+
+Get data from first 4 tables on the Wikipedia page "List of best-selling books":
+
+```{r}
+wiki_sales_title <- "List of best-selling books"
+
+sales_tables <- get_wiki_tables(wiki_sales_title)
+
+all_sales <- c(1:4) |>  
+  map_df(convert_table) |> 
+  drop_na() |> 
+  mutate(sales_in_mil = str_extract(approximate_sales,"[:digit:]+"),
+         sales_in_mil = as.numeric(sales_in_mil),
+         # convert to all lower case to allow joining
+         book = str_to_lower(book))
+
+```
+
+Join with NYT data (added after the TT session out of curiosity):
+
+```{r}
+
+top_titles_sales <- top_titles |> 
+  mutate(title = str_to_lower(title)) |> 
+  left_join(all_sales, by = c("title" = "book")) |> 
+  mutate(title = str_to_title(title)) |> 
+  select(-approximate_sales)
+
+top_titles_sales |> 
+  mutate(weeks_cat = cut_interval(total_weeks, n = 3,
+                                  labels = c("bottom","middle","top")),
+         weeks_cat = fct_relevel(weeks_cat, 
+                                levels = c("top","middle",
+                                           "bottom"))) |> 
+  slice_max(order_by = sales_in_mil, n = 20) |> 
+  ggplot(aes(x = fct_reorder(title, sales_in_mil),
+             y = sales_in_mil, 
+             fill = weeks_cat)) +
+  scale_fill_brewer(palette = "Dark2") +
+  geom_col() +
+  labs(title = "Best-selling books",
+       y = "Number of copies sold (million)",
+       x = NULL,
+       fill = "Weeks on NYT bestseller list") +
+  coord_flip() +
+  theme_cowplot()
+  
+
+```
+
+
+
+

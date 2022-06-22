@@ -20,5 +20,5 @@
 | `2022-04-26` | No session this week | N/A | N/A | N/A |
 | `2022-05-10` | Create Your Own R Packages | N/A | [Ashley](./2022-05-10/2022-05-10_DIYpackages_AP.Rmd) | N/A |
 | `2022-05-24` | No session this week | N/A | N/A | N/A |
-| `2022-06-07` | aRm | TBA | Maya | TBA |
-| `2022-06-21` | TBA | TBA | TBA | TBA |
+| `2022-06-07` | No session this week | N/A | N/A | N/A |
+| `2022-06-21` | Live coding | [Tidy Tuesday week 19 2022](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-05-10/readme.md) | [Ina](./2022-06-22/tt_2022-06-21.md) | TBA |
