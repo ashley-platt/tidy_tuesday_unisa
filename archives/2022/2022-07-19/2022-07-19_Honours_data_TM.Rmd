@@ -1,0 +1,336 @@
+---
+title: "Tidy Tuesday Presentation"
+author: "Tabitha McLoughney"
+date: '2022-07-19'
+output: github_document
+always_allow_html: true
+---
+## Honours Data Analysis {.tabset .tabset-fade .tabset-pills}
+
+### Data importing and tidying
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lme4)
+library(RColorBrewer)
+library(ggrepel)
+library(ggpubr)
+
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+d <- read_csv("C:\\Users\\Tabi\\Desktop\\Honours\\Data\\participant_info.csv") 
+
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+data0 = d[-c(38, 39, 40),]
+
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(reactable)
+
+reactable(data0)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+data0$gender <- as_factor(data0$Gender)
+```
+
+### Data distribution 
+
+```{r message=FALSE, warning=FALSE}
+data0 %>%
+  ggplot(aes(x = Age)) +
+  geom_histogram(fill = "#80DEEA", colour = "black") +
+  labs(title = "Distribution of age in the study sample")
+```
+
+```{r message=FALSE, warning=FALSE}
+data0 %>%
+  ggplot(aes(x = gender)) +
+  geom_histogram(fill = "#B39DDB", colour = "black", stat = "count") +
+  xlab("Gender") +
+  scale_x_discrete(labels = c("1" = "Women", "2" = "Men")) +
+  labs(title = "Distribution of gender in the study sample")
+```
+
+```{r message=FALSE, warning=FALSE}
+data0 %>%
+  ggplot(aes(x = CFMT)) +
+  geom_histogram(fill = "#C5E1A5", colour = "black") +
+  labs(title = "Distribution of Cambridge Face Memory Test scores")
+```
+
+```{r}
+CFMT2 <- seq(min(data0$CFMT), max(data0$CFMT), length = 40)
+fun <- dnorm(CFMT2, mean = mean(data0$CFMT), sd = sd(data0$CFMT))
+hist(data0$CFMT, prob = TRUE, col = "white",
+     ylim = c(0, max(fun)), 
+     main = "Histogram with normal curve for CFMT scores",
+     xlab = "CFMT score")
+lines(CFMT2, fun, col = 2, lwd = 2)
+```
+
+```{r message=FALSE, warning=FALSE}
+data0 %>%
+  ggplot(aes(x = Hand)) +
+  geom_histogram(fill = "#FFE082", colour = "black") +
+  labs(title = "Distribution of handedness in the study sample", x = "Handedness score")
+```
+
+```{r}
+Hand2 <- seq(min(data0$Hand), max(data0$Hand), length = 40)
+fun <- dnorm(Hand2, mean = mean(data0$Hand), sd = sd(data0$Hand))
+hist(data0$Hand, prob = TRUE, col = "white",
+     ylim = c(0, max(fun)), 
+     main = "Histogram with normal curve for handedness scores",
+     xlab = "Handedness score")
+lines(Hand2, fun, col = 2, lwd = 2)
+```
+
+```{r message=FALSE, warning=FALSE}
+data0 %>%
+  ggplot(aes(x = Age)) +
+  geom_histogram(fill = "#80DEEA", colour = "black") +
+  facet_wrap(~gender) +
+  labs(title = "Distribution of age faceted by gender")
+```
+
+```{r echo=TRUE, results='hide', message=FALSE, warning=FALSE}
+data <- data0 %>%
+  mutate(gender = recode(gender, "1" = "Female", "2" = "Male")) 
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+reactable(data)
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = CFMT)) +
+  geom_histogram(fill = "#C5E1A5", colour = "black") +
+  facet_wrap(~gender) +
+  labs(title = "Distribution of Cambridge Face Memory Test scores faceted by gender")
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = HP_score_self)) +
+  geom_histogram(fill = "#F48FB1", colour = "black") +
+  facet_wrap(~gender) +
+  xlab("Harry potter knowledge self score (%)") +
+  labs(title = "Distribution of Harry Potter knowledge self scores faceted by gender")
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = Age)) +
+  geom_histogram(fill = "#80DEEA", colour = "black") +
+  facet_grid(gender~Condition) +
+  labs(title = "Distribution of participant age, faceted by condition and gender")
+```
+
+```{r message=FALSE, warning=FALSE}
+data%>%
+  ggplot(aes(x = gender, y = Age)) +
+  geom_boxplot(fill = "#B39DDB") +
+  stat_summary(fun.y = "mean", geom = "point", shape = 23, size = 3, fill = "#80DEEA") +
+  facet_wrap(~Condition) +
+  labs(title = "Distribution of age and gender, faceted by condition", x = "Gender")
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = CFMT)) +
+  geom_histogram(fill = "#C5E1A5", colour = "black") +
+  facet_grid(gender~Condition) +
+  labs(title = "Distribution of participant Cambridge Face Memory Test scores, faceted by \n condition and gender")
+```
+
+```{r message=FALSE, warning=FALSE}
+data%>%
+  ggplot(aes(x = gender, y = CFMT)) +
+  geom_boxplot(fill = "#B39DDB") +
+  stat_summary(fun.y = "mean", geom = "point", shape = 23, size = 3, fill = "#C5E1A5") +
+  facet_wrap(~Condition) +
+  labs(title = "Distribution of Cambridge Face Memory Test and gender, \n faceted by condition", x = "Gender", y = "Cambridge Face Memory Test")
+```
+
+```{r message=FALSE, warning=FALSE}
+data%>%
+  ggplot(aes(x = Condition, y = Age)) +
+  geom_boxplot(fill = "#80DEEA") +
+  stat_summary(fun.y = "mean", geom = "point", shape = 23, size = 3, fill = "#FFF59D") +
+  labs(title = "Distribution of age and condition")
+data%>%
+  ggplot(aes(x = Condition, y = CFMT)) +
+  geom_boxplot(fill = "#C5E1A5") +
+  stat_summary(fun.y = "mean", geom = "point", shape = 23, size = 3, fill = "#F48FB1") +
+  labs(title = "Distribution of Cambridge Face Memory Test and condition", x = "Condition", y = "Cambridge Face Memory Test")
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = gender)) +
+  geom_histogram(fill = "#B39DDB", colour = "black", stat = "count") +
+  facet_wrap(~Condition) +
+  labs(title = "Distribution of gender by condition", x = "Gender")
+
+```
+
+```{r message=FALSE, warning=FALSE}
+data%>%
+  ggplot(aes(x = Condition, y = HP_score_test_perc)) +
+  geom_boxplot(fill = "#F48FB1") +
+  stat_summary(fun.y = "mean", geom = "point", shape = 23, size = 3, fill = "#ECEFE1") +
+  ylab("Quiz score (%)") +
+  labs(title = "Harry Potter knowledge quiz score distribution by condition")
+```
+
+### Scatterplots and correlations
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = Age, y = CFMT, colour = gender)) +
+  geom_point() +
+  stat_cor(method = "pearson", label.x = 35, p.digits = .1) +
+  geom_smooth(method=lm, se = FALSE) +
+  scale_color_brewer(palette = "Paired") +
+  labs(colour = "Gender", title = "The relationship between participant age and Cambridge Face Memory \n Test score")
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = Age, y = CFMT, colour = gender)) +
+  geom_point() +
+  stat_cor(method = "pearson", label.x = 25, p.digits = .1) +
+  geom_smooth(method=lm, se = FALSE) +
+  facet_wrap(~Condition) +
+  scale_color_brewer(palette = "Set2") +
+  labs(colour = "Gender", title = "The relationship between participant age and Cambridge Face Memory \n Test score")
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
+fun_color_range <- colorRampPalette(c("#9C27B0", "#F44336"))
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
+my_colors <- fun_color_range(40) 
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = HP_score_self, y = HP_score_test_perc, colour = -Age)) +
+  geom_point() +
+  stat_cor(method = "pearson", label.x = 0, label.y = 100, p.digits = .1) +
+  geom_smooth(method = "lm", colour = "#FFA000") +
+  scale_colour_gradientn(colors = my_colors) +
+  facet_wrap(~gender) +
+  ggtitle("The relationship between Harry Potter knowledge self score and quiz score \n faceted by gender.") +
+  xlab("Self score") +
+  ylab("Quiz score") +
+  labs(colour = "Age")
+```
+
+```{r message=FALSE, warning=FALSE}
+
+data %>%
+  ggplot(aes(x = Age, y = HP_score_test_perc)) +
+  geom_point(colour = "#5C6BC0") +
+  stat_cor(method = "pearson", label.x = 15, label.y = 115, p.digits = .1) +
+  geom_smooth(method = "lm", colour = "#FF5722") +
+  facet_wrap(~gender) +
+  ggtitle("The relationship between age and Harry Potter knowledge quiz score, \n faceted by gender.") +
+  xlab("Age") +
+  ylab("Quiz score")
+```
+
+```{r include=FALSE}
+fun_color_range1 <- colorRampPalette(c("#2196F3", "#F06292"))
+```
+
+```{r include=FALSE}
+my_colors1 <- fun_color_range1(40) 
+```
+
+```{r include=FALSE}
+fun_color_range2 <- colorRampPalette(c("#00897B", "#FFEB3B"))
+```
+
+```{r include=FALSE}
+my_colors2 <- fun_color_range2(40) 
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = CFMT, y = HP_score_test_p2, colour = HP_score_test_p1)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "#311B92") +
+  stat_cor(method = "pearson", label.x = 65, label.y = 10, p.digits = .1) +
+  scale_colour_gradientn(colors = my_colors1) +
+  ggtitle("The relationship between Cambridge Face Memory Test scores and Harry \n Potter knowledge quiz part 2 scores") +
+  xlab("Cambridge Face Memory Test") +
+  ylab("Harry Potter quiz part 2 score") +
+  labs(colour = "Harry Potter quiz part 1 score")
+
+```
+
+```{r message=FALSE, warning=FALSE}
+data%>%
+  ggplot(aes(x = HP_score_self, y = HP_score_test_perc, colour = -Age, col = "#00C0B8")) +
+  geom_point() +
+  stat_cor(method = "pearson", label.x = 3, label.y = 115, p.digits = .1) +
+  scale_colour_gradientn(colors = my_colors2) +
+  geom_smooth(method = "lm", col = "#33691E") +
+  facet_wrap(~Condition) +
+  labs(x = "Self score", y = "Quiz score", colour = "Age", title = "The relationship between Harry Potter knowledge subjective and objective \n scores, faceted by condition.")
+
+```
+
+```{r include=FALSE}
+fun_color_range3 <- colorRampPalette(c("#F06292", "#7986CB"))
+```
+
+```{r include=FALSE}
+my_colors3 <- fun_color_range3(40) 
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = HP_score_test_p1, y = HP_score_test_p2)) +
+  geom_point() +
+  stat_cor(method = "pearson", label.x = .5, label.y = 10) +
+  geom_smooth(method=lm, col='#F48FB1') +
+  labs(x = "Quiz score for part 1 (cued recall)", y = "Quiz score for part 2 (free recall)", title = "The relationship between part 1 and part 2 scores from the Harry Potter \n knowledge quiz.")
+```
+
+##### This graph demonstrates there is a positive relationship between part 1 and part 2 quiz scores, suggesting both parts equally assessed participant Harry Potter knowledge and increasing our confidence that this metric is a reliable tool for analysing objective levels of Harry Potter knowledge.
+
+```{r message=FALSE, warning=FALSE}
+data %>%
+  ggplot(aes(x = HP_score_test_p1, y = HP_score_test_p2)) +
+  geom_point() +
+  stat_cor(method = "pearson", label.x = .5, label.y = 10) +
+  geom_smooth(method=lm, col="#F48FB1") +
+  facet_wrap(~Condition) +
+  labs(x = "Quiz score for part 1 (cued recall)", y = "Quiz score for part 2 (free recall)", title = "The relationship between part 1 and part 2 scores from the Harry Potter \n knowledge quiz, faceted by condition.")
+```
+
+```{r message=FALSE, warning=FALSE}
+data %>% 
+  mutate(group = case_when(
+    between(Age, 18, 23) ~ "18-23",
+    between(Age, 24, 29) ~ "24-29",
+    between(Age, 30, 35) ~ "30-35",
+    between(Age, 36, 41) ~ "36-41",
+    TRUE ~ NA_character_
+  )) %>%
+  ggplot(aes(x = HP_score_self, y = HP_score_test_perc)) +
+  geom_point(colour = "#5C6BC0") +
+  facet_wrap(~group) +
+  stat_cor(method = "pearson", label.x = .5, label.y = 110) +
+  geom_smooth(method=lm, se = FALSE, col="#283523") +
+  labs(x = "Self score", y = "Quiz score")
+```
