@@ -23,4 +23,6 @@
 | `2022-06-07` | No session this week | N/A | N/A | N/A |
 | `2022-06-21` | Live coding (Web Scraping) | [Tidy Tuesday week 19 2022](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-05-10/readme.md) | [Ina](./2022-06-22/tt_2022-06-21.md) | N/A |
 | `2022-07-05` | Live coding (Functions) | Own Data | Ina | N/A |
-| `2022-07-19` | Honours Demographic Data Exploration | Own Data | Tabitha | N/A |
+| `2022-07-19` | Honours Demographic Data Exploration | Own Data | [Tabitha](./2022-07-19/2022-07-19_Honours_data_TM.md) | N/A |
+| `2022-08-02` | TBA | TBA | TBA | TBA |
+| `2022-08-16` | TBA | TBA | TBA | TBA |
