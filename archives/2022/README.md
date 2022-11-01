@@ -24,5 +24,14 @@
 | `2022-06-21` | Live coding (Web Scraping) | [Tidy Tuesday week 19 2022](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-05-10/readme.md) | [Ina](./2022-06-22/tt_2022-06-21.md) | N/A |
 | `2022-07-05` | Live coding (Functions) | Own Data | Ina | N/A |
 | `2022-07-19` | Honours Demographic Data Exploration | Own Data | [Tabitha](./2022-07-19/2022-07-19_Honours_data_TM.md) | N/A |
-| `2022-08-02` | TBA | TBA | TBA | TBA |
-| `2022-08-16` | TBA | TBA | TBA | TBA |
+| `2022-08-02` | No session this week | N/A | N/A | N/A |
+| `2022-08-16` | No session this week | N/A | N/A | N/A |
+| `2022-08-30` | NASA Martian Rovers | NASA | Vina | N/A |
+| `2022-09-13` | No session this week | N/A | N/A | N/A |
+| `2022-09-27` | No session this week | N/A | N/A | N/A |
+| `2022-10-11` | Workshopping | Own data | Maya/Scott & Jess | N/A |
+| `2022-10-25` | No session this week | N/A | N/A | N/A |
+| `2022-11-08` | TBA | TBA | Ina | N/A |
+| `2022-11-26` | TBA | TBA | Ashley | N/A |
+| `2022-12-08` | TBA | TBA | Hayley | N/A |
+| No sessions until 2023 | . | . | . | . |
