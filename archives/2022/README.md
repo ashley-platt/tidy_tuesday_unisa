@@ -31,7 +31,7 @@
 | `2022-09-27` | No session this week | N/A | N/A | N/A |
 | `2022-10-11` | Workshopping | Own data | Maya/Scott & Jess | N/A |
 | `2022-10-25` | No session this week | N/A | N/A | N/A |
-| `2022-11-08` | TBA | TBA | Ina | N/A |
+| `2022-11-08` | Stranger Things Dialogue | [Tidy Tuesday week 41 2022](https://github.com/rfordatascience/tidytuesday/tree/master/data/2022/2022-10-18) | [Ina](./2022-11-08/tt_2022-11-08_IBS.md) | N/A |
 | `2022-11-26` | TBA | TBA | Ashley | N/A |
 | `2022-12-08` | TBA | TBA | Hayley | N/A |
 | No sessions until 2023 | . | . | . | . |
