@@ -26,7 +26,7 @@
 | `2022-07-19` | Honours Demographic Data Exploration | Own Data | [Tabitha](./2022-07-19/2022-07-19_Honours_data_TM.md) | N/A |
 | `2022-08-02` | No session this week | N/A | N/A | N/A |
 | `2022-08-16` | No session this week | N/A | N/A | N/A |
-| `2022-08-30` | NASA Martian Rovers | NASA | Vina | N/A |
+| `2022-08-30` | NASA Martian Rovers | NASA | [Vina](./2022-08-30/2022-08-30_Mars_rover_activity_VT.Rmd) | N/A |
 | `2022-09-13` | No session this week | N/A | N/A | N/A |
 | `2022-09-27` | No session this week | N/A | N/A | N/A |
 | `2022-10-11` | Workshopping | Own data | Maya/Scott & Jess | N/A |
