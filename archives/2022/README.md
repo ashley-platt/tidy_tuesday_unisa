@@ -32,6 +32,6 @@
 | `2022-10-11` | Workshopping | Own data | Maya/Scott & Jess | N/A |
 | `2022-10-25` | No session this week | N/A | N/A | N/A |
 | `2022-11-08` | Stranger Things Dialogue | [Tidy Tuesday week 41 2022](https://github.com/rfordatascience/tidytuesday/tree/master/data/2022/2022-10-18) | [Ina](./2022-11-08/tt_2022-11-08_IBS.md) | N/A |
-| `2022-11-26` | TBA | TBA | Ashley | N/A |
-| `2022-12-08` | TBA | TBA | Hayley | N/A |
+| `2022-11-26` | No Session this week | N/A | N/A | N/A |
+| `2022-12-08` | Open Source Psychometrics | [Tidy Tuesday week 32 2022](https://github.com/rfordatascience/tidytuesday/tree/master/data/2022/2022-08-16) | [Hayley](./2022-12-06/2022-12-06_open-psychometrics_HC.md) | [Hayley (Shiny App)](./2022-12-06/mb_app.R) |
 | No sessions until 2023 | . | . | . | . |
