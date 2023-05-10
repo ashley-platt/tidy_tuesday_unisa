@@ -1,0 +1,257 @@
+---
+title: "Pet Cats UK"
+author: "Ashley Platt & Hayley Caldwell"
+date: "2023-04-28"
+output:
+  html_document: 
+    theme: spacelab 
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(tidyverse)
+library(tidytuesdayR)
+library(ggimage)
+
+```
+
+
+# Load the data
+
+```{r}
+
+tt <- tidytuesdayR::tt_load("2023-01-31")
+
+pet_cats <- tt$cats_uk_reference
+
+```
+
+# Introduction to cats 
+
+Cats are small carnivorous mammals that are often kept as domesticated pets. They are known for their playful and independent personalities, as well as their ability to catch mice and other small animals. Domesticated cats come in a variety of breeds, sizes, and colors, and are often kept indoors as house pets or allowed to roam outside as outdoor pets. They are known for their sharp claws and teeth, which they use for hunting, climbing, and defending themselves. Cats are also popular for their soothing purring sound, which is often associated with relaxation and comfort.
+
+# Explore the data
+
+```{r}
+
+glimpse(pet_cats)
+
+# Summary statistics for numerical variables
+summary(pet_cats$age_years)
+summary(pet_cats$n_cats)
+
+
+# Frequency table for categorical variable
+table(pet_cats$animal_sex)
+
+```
+
+# Create a histogram of ages
+
+```{r}
+
+ggplot(pet_cats, aes(x = age_years)) + 
+  geom_histogram()
+
+```
+
+Cat fact #1: The oldest recorded cat in history was named Creme Puff, who lived to be 38 years and 3 days old. This is equivalent to 169 cat years!
+
+
+# Create a bar plot of the number of cats per household
+
+```{r}
+
+ggplot(pet_cats, aes(x = n_cats)) + 
+  geom_bar()
+
+```
+
+Cat fact #2: The record for the most cats in a household is not an officially recognized record, as the Guinness World Records does not track records related to pet ownership or animal welfare. However, there have been reports of households with dozens or even hundreds of cats, often in cases of animal hoarding. It's important to note that such situations can have serious health and safety implications for both the cats and the humans involved.
+
+# Scatter plot of age vs. num_cats
+
+```{r}
+
+ggplot(pet_cats, aes(x = age_years, y = n_cats)) +
+  geom_point()
+
+```
+
+
+# Bar plot of num_cats by sex
+
+```{r}
+
+ggplot(pet_cats, aes(x = animal_sex)) +
+  geom_bar()
+
+```
+
+
+Cat fact #3: Female cats are more likely to be right-pawed, while male cats are more likely to be left-pawed, according to a study published in the journal Animal Behaviour.
+
+# Box plot of age by sex
+
+```{r}
+
+ggplot(pet_cats, aes(x = animal_sex, y = age_years)) +
+  geom_boxplot()
+
+```
+
+# Stacked bar plot of num_cats by age group and sex
+
+```{r}
+
+pet_cats_age_grouped <- pet_cats %>%
+  mutate(age_group = cut(age_years, breaks = c(0, 2, 5, 10, Inf))) %>%
+  group_by(age_group, animal_sex) %>%
+  summarize(mean_num_cats = mean(n_cats))
+
+ggplot(pet_cats_age_grouped, aes(x = age_group, y = mean_num_cats, fill = animal_sex)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Age group", y = "Average number of cats", fill = "Sex")
+
+```
+
+Cat fact #4: While there is some evidence to suggest that female cats may live longer than male cats, the reasons for this are not entirely clear. One factor that may contribute to longer lifespans in female cats is that male cats may be more prone to getting into fights or engaging in other risky behaviors that can lead to injury or illness.
+
+# Cats and hunting 
+
+To explore the sex differences in whether the cats were allowed to hunt and how many prey they caught, we can create a series of bar plots and box plots:
+
+```{r}
+
+ggplot(pet_cats, aes(x = animal_sex, fill = hunt)) +
+  geom_bar(position = "fill") +
+  scale_fill_discrete(name = "Allowed to Hunt", labels = c("No", "Yes")) +
+  labs(x = "Sex", y = "Proportion") +
+  ggtitle("Proportion of Cats Allowed to Hunt by Sex")
+
+# Box plot of prey caught by sex
+ggplot(pet_cats, aes(x = animal_sex, y = prey_p_month)) +
+  geom_boxplot() +
+  labs(x = "Sex", y = "Prey Caught") +
+  ggtitle("Prey Caught by Sex")
+
+
+```
+
+
+The first plot shows the proportion of cats allowed to hunt by sex, with sex on the x-axis and the proportion of cats allowed to hunt on the y-axis. We use position = "fill" to stack the bars so that each bar shows the proportion of cats in each sex category that were allowed to hunt. The fill color of the bars indicates whether the cat was allowed to hunt (blue for yes, orange for no). From this plot, we can see that a higher proportion of male cats were allowed to hunt compared to female cats.
+
+The second plot shows a box plot of the number of prey caught by sex, with sex on the x-axis and the number of prey caught on the y-axis. From this plot, we can see that male cats caught slightly more prey on average than female cats.
+To test for significant differences between the groups, we can use t-tests:
+
+
+```{r}
+
+# T-test of prey caught by sex
+ttest_prey <- t.test(pet_cats$prey_p_month ~ pet_cats$animal_sex)
+ttest_prey
+
+```
+
+The t.test() function performs a two-sample t-test comparing the number of prey caught by male and female cats. The summary() function displays the results of the t-test, including the t-statistic, degrees of freedom, and p-value.
+
+Based on the plots and t-test, there appear to be sex differences in whether cats were allowed to hunt and how many prey they caught, with male cats more likely to be allowed to hunt and catch more prey on average than female cats.
+
+# Relationship between food and age 
+
+```{r}
+
+# Combine logical variables to create new categorical variable
+
+pet_cats$food <- ifelse(pet_cats$food_dry & pet_cats$food_wet, "Mixed",
+               ifelse(pet_cats$food_dry, "Dry",
+                      ifelse(pet_cats$food_wet, "Wet", "Unknown")))
+
+# View the resulting categorical variable
+table(pet_cats$food)
+
+```
+
+This code creates two logical variables fed_dry and fed_wet to indicate whether each cat was fed dry or wet food. We then use ifelse() to create a new categorical variable food based on the combination of the two logical variables. If the cat was fed both dry and wet food, we code the food variable as "Mixed". If the cat was fed only dry food, we code it as "Dry". If the cat was fed only wet food, we code it as "Wet". If neither logical variable is true (i.e., the cat was not fed either dry or wet food), we code it as "Unknown".
+
+
+```{r}
+
+ggplot(pet_cats, aes(x = food, y = age_years)) +
+  geom_boxplot() +
+  labs(x = "Food", y = "Age (years)")
+
+```
+
+```{r}
+
+# One-way ANOVA
+anova_age_food <- aov(age_years ~ food, data = pet_cats)
+summary(anova_age_food)
+
+```
+
+Based on the box plot and ANOVA, it appears that there may be a slight difference in the age distribution between the different types of food, with cats fed "Wet" food having a slightly higher median age than cats fed "Dry" or "Mixed" food. However, the effect size is likely small and the statistical significance is not strong. It is also important to note that correlation does not imply causation, and there may be other factors at play that affect the age distribution of cats fed different types of food.
+
+
+Cat fact #5: The world's most expensive cat food, called "Bistro Cat," costs $48 per pound and is made with quail, lobster, and Russian caviar.
+
+# A pretty plot - hours indoors vs. age 
+
+```{r}
+
+# Create the plot
+p <- ggplot(pet_cats, aes(x = age_years, y = hrs_indoors)) +
+  geom_point(color = "#E0C3FC", size = 3) +
+  geom_smooth(color = "#F9A8D4", method = "lm", se = FALSE) +
+  labs(x = "Age (years)", y = "Hours indoors per day") +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    axis.line = element_line(color = "black"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black"),
+    legend.position = "none",
+    plot.background = element_rect(fill = "#F2D2B3", color = NA),
+    panel.background = element_rect(fill = "#FFF8E7", color = NA)
+  )
+
+p
+
+# Add cat-themed data points (p plus cat)
+p + (geom_image(mapping = aes(x = age_years, y = hrs_indoors, image = 'https://static.wixstatic.com/media/2cd43b_b4adb5c56af247fb8e36d1433149b079~mv2.png/v1/fill/w_227,h_228,q_90/2cd43b_b4adb5c56af247fb8e36d1433149b079~mv2.png')))
+```
+
+
+# Twitter can help us 
+
+This code creates a scatterplot with points colored by sex, where each point represents a cat's age and the number of hours they spend indoors each day. The geom_label_repel() function adds labels to each point, displaying the cat's name. The code was shared by @MaxTheMojo1 on Twitter.
+
+```{r}
+library(ggrepel)
+
+pet_cats %>%
+  ggplot(aes(x = age_years, y = hrs_indoors, color = animal_sex)) +
+  geom_point() +
+  theme_minimal() +
+  labs(x = "Age (years)", y = "Hours spent indoors per day", color = "Sex") +
+  geom_label_repel(aes(label = animal_id))
+
+```
+
+# Some puns to finish 
+
+1) What do you call a pile of cats? A meowtain.
+2) Why was the cat sitting on the computer? It wanted to keep an eye on the mouse!
+3) What do you get when you cross a cat and a lemon? A sourpuss!
+4) Why did the cat wear a fancy dress? She was feline fine!
+5) What do you call a cat magician? A catastrophe!
+
