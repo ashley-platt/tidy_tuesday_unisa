@@ -7,4 +7,7 @@
 | `2023-03-21` | Fatigue Questionnaires | Own Data | [Hayley](./2023-03-21/2023-03-21_fatigue-questionnaires_HC.md) | N/A |
 | `2023-04-04` | School Start Times | Own Data | Scott | N/A |
 | `2023-04-18` | TBC | Own Data | Ina | N/A |
-| '2023-05-09' | UK Pet Cats (CatGPT) | R4DS TT Data set | [Ashley & Hayley](./2023-05-09/2023-05-09_UK%20Pet%20Cats_AP_HC.Rmd)| N/A |
+| `2023-05-09` | UK Pet Cats (CatGPT) | [R4DS TT Data set (2023-01-31)](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-01-31/readme.md) | [Ashley & Hayley](./2023-05-09/2023-05-09_UK%20Pet%20Cats_AP_HC.Rmd)| N/A | 
+| `2023-06-13` | GGPlot Customisations | Own Data | Chloe | N/A |
+| `2023-06-27` | Developing a CNL Package | Own Data | Ina | N/A |
+| `2023-07-11` | Hollywood Age Gaps | [R4DS TT Data Set (2023-02-17)](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-02-14/readme.md) | Maya | N/A |
